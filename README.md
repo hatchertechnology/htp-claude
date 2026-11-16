@@ -29,8 +29,7 @@ stored in the plugin.
 - `website-management` — add, rename or delete websites; GA4 and Business Profile bindings; Seosmith audits
 - `repository-settings` — attach, pause or remove a website's public GitHub repository
 
-Skills are synced from [`plugins/htp`](https://github.com/hatchertechnology/htp/tree/main/plugins/htp)
-in the main HTP repository.
+The four shared skill files are checked against the pinned HTP 1.1 source snapshot. Run `node scripts/check-claude-contract.mjs` and `node scripts/check-provider-request-readiness.mjs`. This is offline readiness only: provider lifecycle use requires backend capability and live host verification; SEOsmith operations remain gated on its adapter. Host issue #1 remains open. See [compatibility](docs/compatibility-claude.md) for limits.
 
 ## License
 

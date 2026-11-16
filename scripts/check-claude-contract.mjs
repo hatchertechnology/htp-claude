@@ -4,6 +4,7 @@
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const failures = [];
@@ -27,6 +28,8 @@ const HTP_TOOLS = new Set([
   'import_website_audit', 'get_provider_connection', 'disconnect_provider', 'inspect_website_url',
   'website_repository_history', 'hello_world_secured',
 ]);
+// References are conditional on backend capability and release gates.
+const GATED_TOOLS = new Set(['get_website_report_request', 'cancel_website_report_request']);
 // SEOsmith operations must not appear until seosmith #18 ships a transport.
 const SEOSMITH_OP = /seosmith_(start|status|cancel|report|export)|run_seosmith|start_seosmith/i;
 const SECRET_LIKE = /(sk-[A-Za-z0-9]{16,}|gho_[A-Za-z0-9]{16,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|Bearer\s+[A-Za-z0-9._-]{16,})/;
@@ -95,8 +98,8 @@ const markdownUnder = (dir) =>
   });
 
 // Backticked snake_case identifiers that are tool-shaped but are inputs, not tools.
-const PARAM_NAMES = new Set(['website_id']);
-const TOOL_VERB = /^(list|get|create|update|delete|set|request|import|inspect|disconnect)_[a-z0-9_]+$/;
+const PARAM_NAMES = new Set(['website_id', 'request_key']);
+const TOOL_VERB = /^(list|get|create|update|delete|set|request|import|inspect|disconnect|cancel)_[a-z0-9_]+$/;
 const TOOL_WEBSITE = /^website_[a-z0-9_]+$/;
 const MCP_NAME = /mcp__plugin_htp_htp__([a-z0-9_]+)/g;
 const BACKTICK = /`([a-z][a-z0-9_]*)`/g;
@@ -128,7 +131,9 @@ for (const folder of skillFolders) {
     for (const m of text.matchAll(MCP_NAME)) names.push({ name: m[1], full: true });
     for (const m of text.matchAll(BACKTICK)) names.push({ name: m[1], full: false });
     for (const { name, full } of names) {
-      if (HTP_TOOLS.has(name)) {
+      if (GATED_TOOLS.has(name)) {
+        continue; // gated lifecycle reference, not baseline availability
+      } else if (HTP_TOOLS.has(name)) {
         referenced.add(name);
         if (file === skillFile) inSkillMd.add(name);
       } else if (full || (!PARAM_NAMES.has(name) && (TOOL_VERB.test(name) || TOOL_WEBSITE.test(name)))) {
@@ -143,31 +148,9 @@ notes.push(
     `only in references/: ${onlyInReferences.join(', ') || 'none'}`,
 );
 
-// 4. Optional parity with the HTP main repository skill copy
-const parityDir = process.env.HTP_MAIN_SKILLS_DIR || resolve(root, '..', 'htp', 'plugins', 'htp', 'skills');
-if (existsSync(parityDir)) {
-  const diff = (a, b) => {
-    const la = readdirSync(a).sort();
-    const lb = readdirSync(b).sort();
-    if (la.join('|') !== lb.join('|')) return `entries differ in ${a}`;
-    for (const n of la) {
-      const pa = join(a, n);
-      const pb = join(b, n);
-      if (statSync(pa).isDirectory()) {
-        const d = diff(pa, pb);
-        if (d) return d;
-      } else if (readFileSync(pa, 'utf8') !== readFileSync(pb, 'utf8')) {
-        return `file differs: ${n} (${pa})`;
-      }
-    }
-    return null;
-  };
-  const d = diff(skillsDir, parityDir);
-  if (d) fail(`skills drift from HTP main copy: ${d}`);
-  else notes.push(`skills identical to ${parityDir}`);
-} else {
-  notes.push('HTP main skills not found; parity check skipped (set HTP_MAIN_SKILLS_DIR)');
-}
+// 4. Mandatory current pinned source and shipped skill parity
+try { execFileSync(process.execPath, [join(root, 'scripts/check-provider-request-readiness.mjs')], {stdio: 'pipe'}); }
+catch (err) { fail(`provider readiness parity failed: ${err.stderr?.toString() || err.message}`); }
 
 // 5. README install steps must match the documented syntax
 const readme = read('README.md');

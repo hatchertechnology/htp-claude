@@ -77,9 +77,7 @@ with `name` and `description` frontmatter, and `name` equals its folder name.
 | `website-management` | Website CRUD, GA4 and Business Profile bindings, report requests, provider status, indexed URL inspection, audit import. |
 | `repository-settings` | Attach, pause or remove a website's public repository. |
 
-The skill text is identical to the copy in the HTP main repository
-(`plugins/htp/skills`). The contract checker enforces this when the sibling checkout is
-present.
+The four shipped skill files match the pinned canonical 1.1 source lock at HTP merge `e19875d0d6e74b5d990e45e456656c99dacc89d1`. The checker requires parity with the pinned snapshot, without a sibling checkout.
 
 ## HTP tool coverage
 
@@ -93,6 +91,8 @@ Tools named in `SKILL.md` files: `list_websites`, `get_website`, `create_website
 `website_audit_history`, `website_audit_detail`, `import_website_audit`,
 `get_provider_connection`, `disconnect_provider`, `inspect_website_url`,
 `website_repository_history`.
+
+The profile additionally references `get_website_report_request` and `cancel_website_report_request` as gated lifecycle tools. Keyed submission and these references require capability discovery, a deployed compatible backend, and host verification; they are not baseline availability. Backend PR 45 is pinned at `48485a55773b1ca97e165a4715d343704270266e`.
 
 ## SEOsmith operations
 
@@ -130,3 +130,5 @@ identifiers. Run it with `node scripts/check-claude-contract.mjs`.
 These checks validate the package's declared contract. They do not prove that a live
 sign-in, a live tool call or a live SEOsmith operation works. Those need host smoke tests
 against the deployed service.
+
+The separate contract 1.1.0 readiness snapshot is offline evidence, distinct from package version 1.1.0. Run `node scripts/check-provider-request-readiness.mjs` for synthetic traces or add `--provider-results PATH` for Claude results. Measured context and counters require independent provenance. Neither this check nor the source lock proves deployment, OAuth, live host normalization or lifecycle behavior; host issue #1 remains open. HTP lifecycle and SEOsmith adapter gates both remain in force.
