@@ -85,32 +85,63 @@ if (mcp) {
 const skillsDir = join(root, 'plugins/htp/skills');
 const skillFolders = readdirSync(skillsDir).filter((n) => statSync(join(skillsDir, n)).isDirectory());
 if (skillFolders.length === 0) fail('no skills found under plugins/htp/skills');
-const referenced = new Set();
+
+// Every Markdown file under a skill folder, including references/, is scanned.
+const markdownUnder = (dir) =>
+  readdirSync(dir).flatMap((n) => {
+    const p = join(dir, n);
+    if (statSync(p).isDirectory()) return markdownUnder(p);
+    return n.endsWith('.md') ? [p] : [];
+  });
+
+// Backticked snake_case identifiers that are tool-shaped but are inputs, not tools.
+const PARAM_NAMES = new Set(['website_id']);
+const TOOL_VERB = /^(list|get|create|update|delete|set|request|import|inspect|disconnect)_[a-z0-9_]+$/;
+const TOOL_WEBSITE = /^website_[a-z0-9_]+$/;
+const MCP_NAME = /mcp__plugin_htp_htp__([a-z0-9_]+)/g;
+const BACKTICK = /`([a-z][a-z0-9_]*)`/g;
+
+const referenced = new Set();      // known HTP tools named anywhere in a skill folder
+const inSkillMd = new Set();       // known HTP tools named in a SKILL.md
 for (const folder of skillFolders) {
-  const file = join(skillsDir, folder, 'SKILL.md');
-  if (!existsSync(file)) {
+  const skillFile = join(skillsDir, folder, 'SKILL.md');
+  if (!existsSync(skillFile)) {
     fail(`skill folder ${folder} has no SKILL.md`);
     continue;
   }
-  const text = readFileSync(file, 'utf8');
-  const fm = text.match(/^---\n([\s\S]*?)\n---\n/);
+  const fmText = readFileSync(skillFile, 'utf8');
+  const fm = fmText.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
   if (!fm) {
     fail(`${folder}/SKILL.md has no frontmatter`);
-    continue;
+  } else {
+    const nameLine = fm[1].match(/^name:\s*(.+)$/m);
+    const descLine = fm[1].match(/^description:\s*(.+)$/m);
+    if (!nameLine || nameLine[1].trim() !== folder) fail(`${folder}/SKILL.md name must equal its folder name`);
+    if (!descLine || !descLine[1].trim()) fail(`${folder}/SKILL.md needs a description`);
   }
-  const nameLine = fm[1].match(/^name:\s*(.+)$/m);
-  const descLine = fm[1].match(/^description:\s*(.+)$/m);
-  if (!nameLine || nameLine[1].trim() !== folder) fail(`${folder}/SKILL.md name must equal its folder name`);
-  if (!descLine || !descLine[1].trim()) fail(`${folder}/SKILL.md needs a description`);
-  for (const m of text.matchAll(/`([a-z][a-z0-9_]{2,})`/g)) {
-    if (HTP_TOOLS.has(m[1])) referenced.add(m[1]);
+
+  for (const file of markdownUnder(join(skillsDir, folder))) {
+    const rel = file.slice(root.length + 1);
+    const text = readFileSync(file, 'utf8');
+    if (SEOSMITH_OP.test(text)) fail(`${rel} references a SEOsmith operation, which is unsupported until seosmith #18`);
+    const names = [];
+    for (const m of text.matchAll(MCP_NAME)) names.push({ name: m[1], full: true });
+    for (const m of text.matchAll(BACKTICK)) names.push({ name: m[1], full: false });
+    for (const { name, full } of names) {
+      if (HTP_TOOLS.has(name)) {
+        referenced.add(name);
+        if (file === skillFile) inSkillMd.add(name);
+      } else if (full || (!PARAM_NAMES.has(name) && (TOOL_VERB.test(name) || TOOL_WEBSITE.test(name)))) {
+        fail(`${rel} names an unknown HTP tool: ${name}`);
+      }
+    }
   }
-  if (SEOSMITH_OP.test(text)) fail(`${folder}/SKILL.md references a SEOsmith operation, which is unsupported until seosmith #18`);
 }
-for (const tool of referenced) {
-  if (!HTP_TOOLS.has(tool)) fail(`unknown HTP tool referenced: ${tool}`);
-}
-notes.push(`skills reference ${referenced.size} of ${HTP_TOOLS.size} known HTP tools`);
+const onlyInReferences = [...referenced].filter((t) => !inSkillMd.has(t)).sort();
+notes.push(
+  `tools named in skills: ${referenced.size} of ${HTP_TOOLS.size}; in SKILL.md: ${inSkillMd.size}; ` +
+    `only in references/: ${onlyInReferences.join(', ') || 'none'}`,
+);
 
 // 4. Optional parity with the HTP main repository skill copy
 const parityDir = process.env.HTP_MAIN_SKILLS_DIR || resolve(root, '..', 'htp', 'plugins', 'htp', 'skills');

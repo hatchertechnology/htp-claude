@@ -33,15 +33,19 @@ The plugin declares one remote MCP server, `htp`, in `plugins/htp/.mcp.json`:
 
 ## Authentication
 
-- Sign-in uses the host's OAuth flow. Run `/mcp` in an interactive session, select
-  `plugin:htp:htp`, and complete the browser sign-in. From a shell, `claude mcp login`
-  and `claude mcp logout` run the same flow. Use `--no-browser` over SSH.
+- Sign-in uses the host's OAuth flow. Run `/mcp` in an interactive session and complete the
+  browser sign-in for the HTP server. From a shell, `claude mcp login <name>` runs the same
+  flow; use `--no-browser` over SSH. The server name for a plugin-provided server is **not
+  verified**. Take it from `/mcp` or `claude mcp list` rather than assuming `htp`.
 - The plugin stores no credential. No `userConfig` secret is declared, and no token,
   client secret or refresh grant is committed or prompted for.
 - `claude -p` and Agent SDK runs have no `/mcp` panel, so OAuth cannot run there. Sign in
   from an interactive session first.
-- Removing the server with `claude mcp remove` deletes the locally stored tokens but does
-  not revoke them at the issuer. Run `claude mcp logout htp` first to revoke them.
+- `claude mcp logout <name>` clears stored OAuth credentials (CLI help). The official MCP docs
+  add two points. The `/mcp` menu's "Clear authentication" is described as revoking access. To
+  revoke tokens where the authorization server supports revocation, run `claude mcp logout <name>`
+  before `claude mcp remove <name>`. `remove` alone deletes local tokens but does not revoke them
+  at the issuer.
 - Expired or missing sign-in must be reported as needing sign-in. It must never appear as
   an empty result. Website access that HTP denies stays denied on every host.
 
@@ -79,10 +83,11 @@ present.
 
 ## HTP tool coverage
 
-The skills reference 17 distinct HTP tools. The server exposes 18. The one not referenced is
-`hello_world_secured`, a connectivity test tool that the plugin does not advertise.
+The skill folders name all 18 HTP tools the server exposes. Seventeen appear in `SKILL.md`
+files. `hello_world_secured` appears only in `seo-review/references/data.md`, where it is
+described as an authentication greeting. No `SKILL.md` uses it for data reads.
 
-Referenced tools: `list_websites`, `get_website`, `create_website`, `update_website`,
+Tools named in `SKILL.md` files: `list_websites`, `get_website`, `create_website`, `update_website`,
 `delete_website`, `set_website_ga4_property`, `set_website_business_location`,
 `set_website_repository`, `request_website_report`, `website_saved_data`,
 `website_audit_history`, `website_audit_detail`, `import_website_audit`,
@@ -118,7 +123,9 @@ claim them.
 `scripts/check-claude-contract.mjs` uses only Node built-ins. It checks the manifest,
 marketplace entry, MCP transport and URL, the absence of credentials and `sse` entries, each
 skill's frontmatter, the HTP tool set, the absence of SEOsmith tools, and README install
-steps. Run it with `node scripts/check-claude-contract.mjs`.
+steps. Every Markdown file under a skill folder, including `references/`, is scanned for SEOsmith
+operations and for unknown tool names: `mcp__plugin_htp_htp__<name>` and tool-shaped backticked
+identifiers. Run it with `node scripts/check-claude-contract.mjs`.
 
 These checks validate the package's declared contract. They do not prove that a live
 sign-in, a live tool call or a live SEOsmith operation works. Those need host smoke tests
