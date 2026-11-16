@@ -30,7 +30,7 @@ const HTP_TOOLS = new Set([
 ]);
 // References are conditional on backend capability and release gates.
 const GATED_TOOLS = new Set(['get_website_report_request', 'cancel_website_report_request']);
-// SEOsmith operations must not appear until seosmith #18 ships a transport.
+// SEOsmith operations must not appear pending host adapter live acceptance.
 const SEOSMITH_OP = /seosmith_(start|status|cancel|report|export)|run_seosmith|start_seosmith/i;
 const SECRET_LIKE = /(sk-[A-Za-z0-9]{16,}|gho_[A-Za-z0-9]{16,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|Bearer\s+[A-Za-z0-9._-]{16,})/;
 
@@ -126,7 +126,7 @@ for (const folder of skillFolders) {
   for (const file of markdownUnder(join(skillsDir, folder))) {
     const rel = file.slice(root.length + 1);
     const text = readFileSync(file, 'utf8');
-    if (SEOSMITH_OP.test(text)) fail(`${rel} references a SEOsmith operation, which is unsupported until seosmith #18`);
+    if (SEOSMITH_OP.test(text)) fail(`${rel} references a SEOsmith operation, which is unsupported pending host adapter live acceptance`);
     const names = [];
     for (const m of text.matchAll(MCP_NAME)) names.push({ name: m[1], full: true });
     for (const m of text.matchAll(BACKTICK)) names.push({ name: m[1], full: false });

@@ -101,9 +101,7 @@ report or export operation. The only SEOsmith-related operations are HTP's store
 history, detail and import, which read or write saved HTP evidence. They do not start a
 crawl.
 
-SEOsmith operations are gated on the shared SEOsmith operation adapter (seosmith #18).
-Until that adapter exists, the Claude package must not advertise them, and a skill must not
-claim them.
+SEOsmith #18 delivered the initial shared adapter. Claude package support remains gated on host adapter live acceptance; the package does not advertise those operations.
 
 ## Capability gates
 
@@ -113,8 +111,8 @@ claim them.
 | Website management and bindings | Available |
 | Repository settings | Available |
 | HTP audit import and history | Available |
-| SEOsmith explicit start, status, cancel, report, export | Unsupported until seosmith #18 |
-| Standalone local SEOsmith audit | Unsupported until seosmith #18 |
+| SEOsmith explicit start, status, cancel, report, export | Unsupported pending host adapter live acceptance |
+| Standalone local SEOsmith audit | Unsupported pending host adapter live acceptance |
 | Baseline-aware CI and staging profiles | Unsupported until a backend release ships them |
 | Forms, orchestration, browser or AI workflows | Unsupported until backend releases ship them |
 
@@ -131,4 +129,4 @@ These checks validate the package's declared contract. They do not prove that a 
 sign-in, a live tool call or a live SEOsmith operation works. Those need host smoke tests
 against the deployed service.
 
-The separate contract 1.1.0 readiness snapshot is offline evidence, distinct from package version 1.1.0. Run `node scripts/check-provider-request-readiness.mjs` for synthetic traces or add `--provider-results PATH` for Claude results. Measured context and counters require independent provenance. Neither this check nor the source lock proves deployment, OAuth, live host normalization or lifecycle behavior; host issue #1 remains open. HTP lifecycle and SEOsmith adapter gates both remain in force.
+The separate contract 1.1.0 readiness snapshot is offline evidence, distinct from package version 1.1.0. Run `node scripts/check-provider-request-readiness.mjs` for synthetic traces or add `--provider-results PATH` for Claude results. Measured context and counters require independent provenance. Neither this check nor the source lock proves deployment, OAuth, live host normalization or lifecycle behavior; host issue #1 remains open. HTP lifecycle and SEOsmith host adapter live acceptance gates both remain in force.

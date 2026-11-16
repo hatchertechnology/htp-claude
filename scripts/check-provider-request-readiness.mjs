@@ -8,7 +8,7 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const tree = resolve(root, 'contract/provider-request-1.1');
 const read = p => JSON.parse(readFileSync(p, 'utf8'));
 const hash = p => createHash('sha256').update(readFileSync(p)).digest('hex');
-assert.equal(hash(resolve(root,'contract/provider-request-1.1.lock.json')), 'd4ed49579b249f21394bb87eb935ea7fb090819906a37c161c92ba09bcad0fee', 'readiness lock drift');
+assert.equal(hash(resolve(root,'contract/provider-request-1.1.lock.json')), '9fad71c6bc2497221c49d33d6df00ceda2c335b7598791391ed38286bf0b3641', 'readiness lock drift');
 const lock = read(resolve(root,'contract/provider-request-1.1.lock.json'));
 assert.equal(lock.contractVersion,'1.1.0');
 assert.equal(lock.canonicalCommit,'e19875d0d6e74b5d990e45e456656c99dacc89d1');

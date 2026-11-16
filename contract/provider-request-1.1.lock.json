@@ -5,9 +5,11 @@
   "backendPR": 45,
   "backendCommit": "48485a55773b1ca97e165a4715d343704270266e",
   "activationGates": [
-    "backend release and capability discovery",
-    "host normalization and live lifecycle verification",
-    "SEOsmith adapter (seosmith #18)"
+    "htp#34",
+    "seosmith-host-adapter-live-acceptance",
+    "host-package-wave1",
+    "deployed-provider-input-schemas",
+    "host-oauth-live-acceptance"
   ],
   "files": {
     "scripts/plugin-contract.mjs": "cad9798593f413961781b2188590c7f57cf785926b84d143daf173068eda4d08",
