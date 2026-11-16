@@ -19,6 +19,7 @@ assert.deepEqual(Object.keys(lock.files).sort(),expected);
 const files = dir => readdirSync(dir,{withFileTypes:true}).flatMap(d => d.isDirectory() ? files(resolve(dir,d.name)) : [relative(tree,resolve(dir,d.name))]);
 assert.deepEqual(files(tree).sort(),expected,'snapshot inventory drift');
 for (const p of expected) assert.equal(hash(resolve(tree,p)),lock.files[p],`snapshot drift: ${p}`);
+const {readJson} = await import('../contract/provider-request-1.1/scripts/plugin-contract.mjs');
 const {profile, validateProviderResults} = await import('../contract/provider-request-1.1/scripts/provider-request-contract.mjs');
 const skills=read(resolve(tree,'docs/plugin-contract/v1.1/skills.lock.json'));
 assert.equal(skills.contractVersion,profile.contractVersion);
@@ -35,7 +36,7 @@ validateProviderResults(fixtures,{contractVersion:'1.1.0',host:'claude',observat
 const args=process.argv.slice(2);
 if(args.length){
  assert.ok(args.length===2 && args[0]==='--provider-results','usage: node scripts/check-provider-request-readiness.mjs [--provider-results file]');
- const result=read(resolve(args[1])); assert.equal(result.host,'claude','host must be claude'); validateProviderResults(fixtures,result);
+ const result=readJson(resolve(args[1])); assert.equal(result.host,'claude','host must be claude'); validateProviderResults(fixtures,result);
  console.log(result.observations.every(o=>Object.hasOwn(o,'context'))?'Measured context supplied for all provider traces; evidence provenance remains an independent acceptance obligation.':'Synthetic fixture context selected; this is not measured backend/host acceptance.');
  console.log('Provider semantic trace assertions passed. Counters/context require independent measured evidence; provenance and live support are not verified.');
 }
