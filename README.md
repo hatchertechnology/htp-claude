@@ -4,16 +4,17 @@ HTP plugin for Claude Code, distributed as a plugin marketplace.
 
 ## Install
 
-```
-/plugin install htp --marketplace hatchertechnology/htp-claude
-```
-
-Or add the marketplace first:
+Add the marketplace, then install the plugin. The install id is `<plugin>@<marketplace>`,
+and both names are `htp`:
 
 ```
 /plugin marketplace add hatchertechnology/htp-claude
 /plugin install htp@htp
 ```
+
+From a shell, the same steps are `claude plugin marketplace add hatchertechnology/htp-claude`
+and `claude plugin install htp@htp`. Compatibility, tested versions and rollback are in
+[docs/compatibility-claude.md](docs/compatibility-claude.md).
 
 ## Connect
 
