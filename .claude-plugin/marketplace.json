@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "htp",
+  "description": "Hatcher Technology plugins for Claude Code",
+  "owner": {
+    "name": "Kerry Hatcher",
+    "email": "kerry@kerryhatcher.com"
+  },
+  "plugins": [
+    {
+      "name": "htp",
+      "source": "./plugins/htp",
+      "description": "Analyze saved website evidence in HTP and make source-backed SEO, performance, conversion, and content recommendations.",
+      "version": "1.1.0",
+      "category": "analytics",
+      "homepage": "https://htp.hatchtech.dev",
+      "keywords": ["seo", "analytics", "search-console", "pagespeed", "crux", "website-performance"]
+    }
+  ]
+}

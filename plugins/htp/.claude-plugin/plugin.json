@@ -1,0 +1,13 @@
+{
+  "name": "htp",
+  "version": "1.1.0",
+  "description": "Analyze saved website evidence in HTP and make source-backed SEO, performance, conversion, and content recommendations.",
+  "author": {
+    "name": "Kerry Hatcher",
+    "email": "kerry@kerryhatcher.com"
+  },
+  "homepage": "https://htp.hatchtech.dev",
+  "repository": "https://github.com/hatchertechnology/htp-claude",
+  "license": "MIT",
+  "keywords": ["htp", "seo", "analytics", "search-console", "pagespeed", "crux", "website-performance"]
+}

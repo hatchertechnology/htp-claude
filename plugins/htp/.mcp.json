@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "htp": {
+      "type": "http",
+      "url": "https://htp-api-kerry-hatcher.fly.dev/mcp/secured"
+    }
+  }
+}
