@@ -88,6 +88,11 @@ if (mcp) {
 const skillsDir = join(root, 'plugins/htp/skills');
 const skillFolders = readdirSync(skillsDir).filter((n) => statSync(join(skillsDir, n)).isDirectory());
 if (skillFolders.length === 0) fail('no skills found under plugins/htp/skills');
+// Shared skills are pinned by the contract locks; host-specific skills are listed here and
+// must carry the capability-gate language below.
+const HOST_SKILLS = ['seosmith-operations'];
+const SHARED_SKILLS = ['repository-settings', 'seo-review', 'website-management'];
+if ([...skillFolders].sort().join() !== [...SHARED_SKILLS, ...HOST_SKILLS].sort().join()) fail(`unexpected skill set: ${skillFolders.join(', ')}`);
 
 // Every Markdown file under a skill folder, including references/, is scanned.
 const markdownUnder = (dir) =>
@@ -126,7 +131,7 @@ for (const folder of skillFolders) {
   for (const file of markdownUnder(join(skillsDir, folder))) {
     const rel = file.slice(root.length + 1);
     const text = readFileSync(file, 'utf8');
-    if (SEOSMITH_OP.test(text)) fail(`${rel} references a SEOsmith operation, which is unsupported pending host adapter live acceptance`);
+    if (!HOST_SKILLS.includes(folder) && SEOSMITH_OP.test(text)) fail(`${rel} references a SEOsmith operation, which is unsupported pending host adapter live acceptance`);
     const names = [];
     for (const m of text.matchAll(MCP_NAME)) names.push({ name: m[1], full: true });
     for (const m of text.matchAll(BACKTICK)) names.push({ name: m[1], full: false });

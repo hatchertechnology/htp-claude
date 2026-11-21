@@ -1,17 +1,18 @@
 # Claude Code compatibility
 
 This page is the Claude Code host contract for the `htp` plugin. It records what is
-supported today, what was tested, and what is not yet available. It is Wave 0
-readiness documentation for the shared plugin contract (HTP #34). It is not a
-release, and it does not complete host issue htp-claude #1, which stays open.
+supported today, what was tested, and what is not yet available. It covers Wave 0
+readiness for the shared plugin contract (HTP #34) and the Wave 1 host package for
+htp-claude #1. It is not a production release; #1 stays open until the release
+criteria at the end of this page are met with live evidence.
 
 ## Tested baseline
 
 | Item | Value |
 | --- | --- |
-| Claude Code tested | 2.1.325 |
+| Claude Code tested | 2.1.330 (lifecycle and validation below); 2.1.325 for earlier readiness work |
 | Minimum version | Not yet verified. Do not rely on a minimum until it is tested. |
-| Plugin version | 1.1.0 (`plugins/htp/.claude-plugin/plugin.json`, matches the marketplace entry) |
+| Plugin version | 1.2.0 (`plugins/htp/.claude-plugin/plugin.json`, matches the marketplace entry) |
 | Install id | `htp@htp` (plugin `htp`, marketplace `htp`) |
 | Validation | `claude plugin validate ./plugins/htp` and `claude plugin validate .` pass |
 
@@ -61,10 +62,21 @@ Install from the marketplace:
 From a shell: `claude plugin marketplace add hatchertechnology/htp-claude` and
 `claude plugin install htp@htp`.
 
-Upgrade and rollback commands are **not yet verified** against the tested version and are
-not documented here. The upgrade path must be checked before it is advertised. The plugin
-version in `plugin.json` and the marketplace entry must always match; the validator checks
-the manifest, and the contract checker checks the match.
+Lifecycle commands verified on Claude Code 2.1.330 in an isolated `CLAUDE_CONFIG_DIR`
+(see `docs/host-verification-claude.md` for transcripts and limits):
+
+| Action | Command |
+| --- | --- |
+| Install | `claude plugin marketplace add hatchertechnology/htp-claude` then `claude plugin install htp@htp` |
+| Upgrade | `claude plugin marketplace update htp` then `claude plugin update htp@htp`, then restart or `/reload-plugins` |
+| Uninstall | `claude plugin uninstall htp@htp`; optionally `claude plugin marketplace remove htp` |
+| Rollback | Re-add the marketplace at the previous tag (`claude plugin marketplace add hatchertechnology/htp-claude@v1.1.0`), `claude plugin uninstall htp@htp`, `claude plugin install htp@htp`. Saved HTP data is server-side and is untouched. |
+
+Upgrade preserves existing users: the 1.1.0 skills and `.mcp.json` are unchanged in 1.2.0. 1.2.0 adds one
+skill (`seosmith-operations`) and one helper (`bin/seosmith-ops.mjs`). Sign-in is stored by the host, not
+the plugin, so uninstall/reinstall may require signing in again. Minimum supported version stays
+unverified; 2.1.330 is the tested floor. The plugin version in `plugin.json` and the marketplace entry must
+always match; the validator and contract checker both check it.
 
 ## Skills
 
@@ -76,6 +88,11 @@ with `name` and `description` frontmatter, and `name` equals its folder name.
 | `seo-review` | Reads saved HTP evidence: website list, saved data, repository history, audit history and detail. Reads never start collection. |
 | `website-management` | Website CRUD, GA4 and Business Profile bindings, report requests, provider status, indexed URL inspection, audit import. |
 | `repository-settings` | Attach, pause or remove a website's public repository. |
+| `seosmith-operations` | Host-specific. Explicit bounded SEOsmith start, status, cancel, report and export through the local adapter helper. Not part of the shared pinned set. |
+
+Shared skills are synchronized byte-for-byte with the pinned 1.2 lock; `seosmith-operations` is exempt from
+those pins and is listed explicitly in `scripts/check-claude-contract.mjs`. To resynchronize, replace the
+vendored `contract/` snapshot and lock together, rerun the three checks, and bump the plugin version.
 
 The four shipped skill files match the pinned canonical 1.2 source lock (`contract/audit-export-1.2.lock.json`) at HTP merge `6c065c8327970b0773ba90f163f99a6e56e1e204` (PR 48). The checker requires parity with the pinned snapshot, without a sibling checkout. The 1.1 provider snapshot under `contract/provider-request-1.1/` is retained byte-for-byte as historical evidence; its shipped-skill equality check moved to the 1.2 pin because the shipped skills now carry the export section.
 
@@ -96,12 +113,21 @@ The profile additionally references `get_website_report_request` and `cancel_web
 
 ## SEOsmith operations
 
-**None are available in this package.** The plugin has no SEOsmith start, status, cancel,
-report or export operation. The only SEOsmith-related operations are HTP's stored audit
-history, detail and import, which read or write saved HTP evidence. They do not start a
-crawl.
+Three modes are kept distinct. `node plugins/htp/bin/seosmith-ops.mjs modes` reports them.
 
-SEOsmith #18 delivered the initial shared adapter. Claude package support remains gated on host adapter live acceptance; the package does not advertise those operations.
+| Mode | Status | Needs |
+| --- | --- | --- |
+| Local execution | Supported when a trusted adapter binary is configured | Absolute `SEOSMITH_BIN` (or `--binary`) whose `operations capabilities` reports `adapter_version` 1 and all five operations. No HTP account. |
+| Configured private worker | Detected only; **not driven** by this package | Operator-only protected-network HTTP. The package never reads its token. |
+| HTP-authorized orchestration | Gated | A signed-in session with deployed `request_website_report`, `get_website_report_request`, `cancel_website_report_request`; discovered per session. |
+
+Local operations: `prepare`, `start`, `status`, `cancel`, `report`, `export`. Start is synchronous and bounded
+(every bound explicit; 10-7200 s, 1-20000 pages); run it in the background and poll status. The helper uses
+`execFile` with an argv array, a `PATH`-only environment and per-operation timeouts, validates requests before
+launch, never auto-retries a mutation, and reports timeouts as uncertain. Unsupported, missing or
+version-mismatched binaries are reported as unavailable; no other command is substituted. Unknown
+`execution_state`, partial coverage, cancelled and failed runs are never presented as a clean audit.
+Evidence v2, authorized staging and baseline CI are advertised false by adapter 1 and are not offered.
 
 ## Capability gates
 
@@ -111,10 +137,20 @@ SEOsmith #18 delivered the initial shared adapter. Claude package support remain
 | Website management and bindings | Available |
 | Repository settings | Available |
 | HTP audit import and history | Available |
-| SEOsmith explicit start, status, cancel, report, export | Unsupported pending host adapter live acceptance |
-| Standalone local SEOsmith audit | Unsupported pending host adapter live acceptance |
+| SEOsmith explicit start, status, cancel, report, export (local) | Implemented; fixture and real-binary non-crawl tests pass; a live crawl through a Claude session is **not yet accepted** |
+| Standalone local SEOsmith audit | Same as above; needs a configured binary, no HTP account |
 | Baseline-aware CI and staging profiles | Unsupported until a backend release ships them |
 | Forms, orchestration, browser or AI workflows | Unsupported until backend releases ship them |
+
+## Release criteria for closing htp-claude #1
+
+Open until all hold with recorded live evidence: (1) real OAuth sign-in, reconnect and sign-out through `/mcp`
+in an interactive session, plus a denied-website read that stays denied; (2) a live local SEOsmith
+start/status/cancel/report/export through a Claude session with a trusted binary (bounded, isolated data);
+(3) deployed export-v1 and report-request tools discovered, then exercised; (4) two independent exact-head
+reviews and merge by the integration owner; (5) tagged release for rollback. Gated skills for forms,
+lifecycle, remediation, provider outcomes, browser/AI workflows and baseline CI are **not** shipped: no
+backend release provides them, and a skill must not be added until discovery shows the tools.
 
 ## Checks
 
@@ -123,7 +159,7 @@ marketplace entry, MCP transport and URL, the absence of credentials and `sse` e
 skill's frontmatter, the HTP tool set, the absence of SEOsmith tools, and README install
 steps. Every Markdown file under a skill folder, including `references/`, is scanned for SEOsmith
 operations and for unknown tool names: `mcp__plugin_htp_htp__<name>` and tool-shaped backticked
-identifiers. Run it with `node scripts/check-claude-contract.mjs`.
+identifiers. Run it with `node scripts/check-claude-contract.mjs`. Helper tests: `node --test scripts/test-seosmith-ops.mjs` (fixture binary; set `SEOSMITH_REAL_BIN` to also run the non-crawling real-adapter checks).
 
 These checks validate the package's declared contract. They do not prove that a live
 sign-in, a live tool call or a live SEOsmith operation works. Those need host smoke tests

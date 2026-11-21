@@ -28,8 +28,9 @@ stored in the plugin.
 - `seo-review` — review saved SEO and performance evidence, compare domains, prioritize fixes
 - `website-management` — add, rename or delete websites; GA4 and Business Profile bindings; Seosmith audits
 - `repository-settings` — attach, pause or remove a website's public GitHub repository
+- `seosmith-operations` — explicit, bounded SEOsmith start/status/cancel/report/export via a locally configured binary (`SEOSMITH_BIN`); no HTP account needed. Gated and mode-aware; see compatibility.
 
-The four shared skill files are checked against the pinned HTP 1.2 source snapshot (complete audit export, contract 1.2.0). Run `node scripts/check-claude-contract.mjs`, `node scripts/check-provider-request-readiness.mjs` and `node scripts/check-audit-export-readiness.mjs`; the export tests are `node --test scripts/test-audit-export-readiness.mjs`. This is offline readiness only: provider lifecycle use requires backend capability and live host verification; SEOsmith operations remain gated on host adapter live acceptance. Host issue #1 remains open. See [compatibility](docs/compatibility-claude.md) for limits.
+The four shared skill files are checked against the pinned HTP 1.2 source snapshot (complete audit export, contract 1.2.0). Run `node scripts/check-claude-contract.mjs`, `node scripts/check-provider-request-readiness.mjs` and `node scripts/check-audit-export-readiness.mjs`; the export tests are `node --test scripts/test-audit-export-readiness.mjs`. This is offline readiness only: provider lifecycle use requires backend capability and live host verification; local SEOsmith operations are implemented but a live Claude-session crawl is not yet accepted. Host issue #1 remains open. See [compatibility](docs/compatibility-claude.md) for limits.
 
 ## License
 

@@ -30,7 +30,8 @@ for (const f of skills.files) {
 }
 // Shipped skills now track contract 1.2 (scripts/check-audit-export-readiness.mjs); this check pins the 1.1 snapshot only.
 const shipped = dir => readdirSync(dir,{withFileTypes:true}).flatMap(d => d.isDirectory()?shipped(resolve(dir,d.name)):[relative(root,resolve(dir,d.name))]);
-assert.deepEqual(shipped(resolve(root,'plugins/htp/skills')).sort(),actual,'shipped inventory drift');
+// Host-specific skills (not in the shared pinned set) are listed in scripts/check-claude-contract.mjs.
+assert.deepEqual(shipped(resolve(root,'plugins/htp/skills')).filter(f=>!f.startsWith('plugins/htp/skills/seosmith-operations/')).sort(),actual,'shipped inventory drift');
 const fixtures=read(resolve(tree,'docs/plugin-contract/v1.1/conformance.json'));
 validateProviderResults(fixtures,{contractVersion:'1.1.0',host:'claude',observations:fixtures.scenarios.map(s=>({id:s.id,steps:s.steps.map(t=>t.expected)}))});
 const args=process.argv.slice(2);

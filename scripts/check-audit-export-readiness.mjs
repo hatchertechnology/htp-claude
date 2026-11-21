@@ -50,7 +50,8 @@ for (const path of expected) assert.equal(treeHash(path), lock.files[path], 'con
 const shippedSkills = expected.filter(p => p.startsWith('plugins/'));
 const shippedInventory = dir => readdirSync(dir, { withFileTypes: true }).flatMap(d =>
   d.isDirectory() ? shippedInventory(join(dir, d.name)) : [join(dir, d.name).slice(root.length)]);
-assert.deepEqual(shippedInventory(join(root, 'plugins/htp/skills')).sort(), shippedSkills, 'shipped skill inventory drift');
+// Host-specific skills (not in the shared pinned set) are enumerated in scripts/check-claude-contract.mjs.
+assert.deepEqual(shippedInventory(join(root, 'plugins/htp/skills')).filter(f => !f.startsWith('plugins/htp/skills/seosmith-operations/')).sort(), shippedSkills, 'shipped skill inventory drift');
 for (const path of shippedSkills) assert.equal(shippedHash(path), lock.files[path], 'shipped skill drift: ' + path);
 
 const { exportProfile, exportFixtures, validateExportResults } = await import('../contract/audit-export-1.2/scripts/audit-export-contract.mjs');
