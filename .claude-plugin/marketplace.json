@@ -11,7 +11,7 @@
       "name": "htp",
       "source": "./plugins/htp",
       "description": "Analyze saved website evidence in HTP and make source-backed SEO, performance, conversion, and content recommendations.",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "category": "analytics",
       "homepage": "https://htp.hatchtech.dev",
       "keywords": ["seo", "analytics", "search-console", "pagespeed", "crux", "website-performance"]
