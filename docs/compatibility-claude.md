@@ -77,7 +77,7 @@ with `name` and `description` frontmatter, and `name` equals its folder name.
 | `website-management` | Website CRUD, GA4 and Business Profile bindings, report requests, provider status, indexed URL inspection, audit import. |
 | `repository-settings` | Attach, pause or remove a website's public repository. |
 
-The four shipped skill files match the pinned canonical 1.1 source lock at HTP merge `e19875d0d6e74b5d990e45e456656c99dacc89d1`. The checker requires parity with the pinned snapshot, without a sibling checkout.
+The four shipped skill files match the pinned canonical 1.2 source lock (`contract/audit-export-1.2.lock.json`) at HTP merge `6c065c8327970b0773ba90f163f99a6e56e1e204` (PR 48). The checker requires parity with the pinned snapshot, without a sibling checkout. The 1.1 provider snapshot under `contract/provider-request-1.1/` is retained byte-for-byte as historical evidence; its shipped-skill equality check moved to the 1.2 pin because the shipped skills now carry the export section.
 
 ## HTP tool coverage
 
@@ -128,5 +128,7 @@ identifiers. Run it with `node scripts/check-claude-contract.mjs`.
 These checks validate the package's declared contract. They do not prove that a live
 sign-in, a live tool call or a live SEOsmith operation works. Those need host smoke tests
 against the deployed service.
+
+The separate contract 1.2.0 audit-export readiness snapshot is offline evidence, distinct from package version 1.1.0. Its checks run with `node scripts/check-audit-export-readiness.mjs` (`--export-results PATH` accepts Claude measured results) and `node --test scripts/test-audit-export-readiness.mjs`. Complete audit export is gated: it requires discovered deployed `website_audit_export_start_v1`, `_chunk_v1` and `_close_v1` tools, a verified backend, and host acceptance. Small `website_audit_detail` results are unchanged; a large unsafe result returns `EXPORT_REQUIRED`, which Claude hosts must follow to the export workflow.
 
 The separate contract 1.1.0 readiness snapshot is offline evidence, distinct from package version 1.1.0. Run `node scripts/check-provider-request-readiness.mjs` for synthetic traces or add `--provider-results PATH` for Claude results. Measured context and counters require independent provenance. Neither this check nor the source lock proves deployment, OAuth, live host normalization or lifecycle behavior; host issue #1 remains open. HTP lifecycle and SEOsmith host adapter live acceptance gates both remain in force.

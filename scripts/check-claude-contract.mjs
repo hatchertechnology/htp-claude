@@ -29,7 +29,7 @@ const HTP_TOOLS = new Set([
   'website_repository_history', 'hello_world_secured',
 ]);
 // References are conditional on backend capability and release gates.
-const GATED_TOOLS = new Set(['get_website_report_request', 'cancel_website_report_request']);
+const GATED_TOOLS = new Set(['get_website_report_request', 'cancel_website_report_request', 'website_audit_export_start_v1', 'website_audit_export_chunk_v1', 'website_audit_export_close_v1']);
 // SEOsmith operations must not appear pending host adapter live acceptance.
 const SEOSMITH_OP = /seosmith_(start|status|cancel|report|export)|run_seosmith|start_seosmith/i;
 const SECRET_LIKE = /(sk-[A-Za-z0-9]{16,}|gho_[A-Za-z0-9]{16,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|Bearer\s+[A-Za-z0-9._-]{16,})/;
@@ -148,9 +148,13 @@ notes.push(
     `only in references/: ${onlyInReferences.join(', ') || 'none'}`,
 );
 
-// 4. Mandatory current pinned source and shipped skill parity
+// 4. Mandatory pinned source and shipped skill parity (1.1 snapshot, then 1.2 current pin)
 try { execFileSync(process.execPath, [join(root, 'scripts/check-provider-request-readiness.mjs')], {stdio: 'pipe'}); }
 catch (err) { fail(`provider readiness parity failed: ${err.stderr?.toString() || err.message}`); }
+for (const script of ['scripts/check-audit-export-readiness.mjs']) {
+  try { execFileSync(process.execPath, [join(root, script)], {stdio: 'pipe'}); }
+  catch (err) { fail(`${script} failed: ${err.stderr?.toString() || err.message}`); }
+}
 
 // 5. README install steps must match the documented syntax
 const readme = read('README.md');

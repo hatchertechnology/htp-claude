@@ -27,8 +27,8 @@ const actual=files(resolve(tree,'plugins/htp/skills')).sort();
 assert.deepEqual(skills.files.map(f=>f.path).sort(),actual);
 for (const f of skills.files) {
  assert.equal(hash(resolve(tree,f.path)),f.sha256,`source lock drift: ${f.path}`);
- assert.equal(hash(resolve(root,f.path)),f.sha256,`shipped skill drift: ${f.path}`);
 }
+// Shipped skills now track contract 1.2 (scripts/check-audit-export-readiness.mjs); this check pins the 1.1 snapshot only.
 const shipped = dir => readdirSync(dir,{withFileTypes:true}).flatMap(d => d.isDirectory()?shipped(resolve(dir,d.name)):[relative(root,resolve(dir,d.name))]);
 assert.deepEqual(shipped(resolve(root,'plugins/htp/skills')).sort(),actual,'shipped inventory drift');
 const fixtures=read(resolve(tree,'docs/plugin-contract/v1.1/conformance.json'));
