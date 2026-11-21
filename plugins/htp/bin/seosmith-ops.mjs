@@ -56,12 +56,14 @@ export async function op(binary, database, sub, extra, opts) {
   args.push('operations', sub, ...extra);
   const r = await run(binary, args, opts);
   if (r.timedOut) fail('timeout', `seosmith operations ${sub} exceeded the host deadline. The outcome is uncertain; query status before any further action.`, { uncertain: true });
+  if (r.spawnError === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') fail('bad_output', `seosmith operations ${sub} exceeded the output limit; the outcome is uncertain.`, { uncertain: true });
+  if (r.signal && !r.timedOut) fail('operation_failed', `seosmith operations ${sub} was interrupted by ${r.signal}; the outcome is uncertain.`, { uncertain: true });
   if (r.spawnError) fail('missing_binary', `Could not execute the SEOsmith binary (${r.spawnError}).`);
   if (r.code !== 0) {
     let reason = null;
     try { reason = JSON.parse(r.stderr).reason ?? null; } catch { /* clap syntax or unknown */ }
-    if (r.code === 2 || reason === null) fail('unsupported_command', `seosmith operations ${sub} was rejected as an unknown or malformed command (exit ${r.code}). This binary is unsupported; do not substitute another command.`);
-    fail('operation_failed', `seosmith operations ${sub} failed: ${reason}`, { reason, exit: r.code });
+    if (r.code === 2) fail('unsupported_command', `seosmith operations ${sub} was rejected as an unknown or malformed command (exit ${r.code}). This binary is unsupported; do not substitute another command.`);
+    fail('operation_failed', `seosmith operations ${sub} failed${reason ? `: ${reason}` : ' without a structured reason'}`, { reason, exit: r.code });
   }
   return r;
 }
@@ -115,6 +117,7 @@ export function prepare({ root, url, pages, resources, durationSeconds, delayMs,
   const auditId = randomUUID();
   const dir = join(root, auditId);
   mkdirSync(root, { recursive: true, mode: 0o700 });
+  if ((statSync(root).mode & 0o7777) !== 0o700) fail('invalid_argument', '--root must be a private directory with mode 0700.');
   mkdirSync(dir, { mode: 0o700 });
   chmodSync(dir, 0o700);
   const request = {
@@ -189,7 +192,7 @@ export async function main(argv, env = process.env) {
   if (command === 'status' || command === 'cancel') {
     const r = await op(binary, database, command, ['--id', id], { timeoutMs: 15000 });
     const result = parseJson(r.stdout, command);
-    if (command === 'cancel' && result.cancel_accepted === true && result.cancellation_terminal !== true) result.note = 'Cancellation accepted but not terminal; poll status. Do not report the run as stopped yet.';
+    if (command === 'cancel' && result.cancel_accepted === true && result.cancellation_terminal !== true) result.note = 'Cancellation accepted but not terminal; poll status. Confirm stopped only when state is cancelled, execution_state is terminal, and worker_active is false; null or unknown is unconfirmed.';
     return { operation: command, result };
   }
   if (command === 'report') {

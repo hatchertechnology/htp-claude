@@ -4,7 +4,7 @@
 // group runs against a real binary only when SEOSMITH_REAL_BIN is set; it never starts a crawl.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, readFileSync, existsSync, chmodSync, statSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, existsSync, chmodSync, statSync, mkdirSync, cpSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,6 +30,7 @@ const b = JSON.parse(fs.readFileSync(path.join(dir, 'behavior.json'), 'utf8'));
 fs.appendFileSync(path.join(dir, 'calls.log'), JSON.stringify({ argv: process.argv.slice(2), env: process.env }) + '\\n');
 const args = process.argv.slice(2); const i = args.indexOf('operations'); const sub = args[i + 1];
 const r = b[sub] || {};
+if (r.signal) process.kill(process.pid, r.signal);
 if (r.sleepMs) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, r.sleepMs);
 if (r.stdout !== undefined) process.stdout.write(typeof r.stdout === 'string' ? r.stdout : JSON.stringify(r.stdout));
 if (r.stderr !== undefined) process.stderr.write(typeof r.stderr === 'string' ? r.stderr : JSON.stringify(r.stderr));
@@ -94,6 +95,9 @@ test('prepare creates a private directory, 0600 request, fresh identity per audi
   assert.notEqual(a.request_id, b.request_id);
   assert.notEqual(a.database, b.database);
   assert.equal(statSync(a.directory).mode & 0o777, 0o700);
+  chmodSync(root, 0o755);
+  assert.throws(() => ops.prepare({ root, url: 'https://example.com/', pages: 5, resources: 5, durationSeconds: 30, delayMs: 1000 }), /mode 0700/);
+  chmodSync(root, 0o700);
   assert.equal(statSync(a.request).mode & 0o777, 0o600);
   assert.equal(JSON.parse(readFileSync(a.request, 'utf8')).request_id, a.request_id);
   assert.throws(() => ops.prepare({ root: 'relative', url: 'https://example.com/', pages: 5, resources: 5, durationSeconds: 30, delayMs: 1000 }), /absolute/);
@@ -148,6 +152,41 @@ test('cancellation accepted but not terminal is flagged; terminal passes through
   f.set({ cancel: { stdout: { request_id: ID, cancel_accepted: false, cancellation_terminal: false, state: 'completed' } } });
   const c = await ops.main(['cancel', '--binary', f.bin, '--database', join(f.dir, 'r.sqlite'), '--id', ID]);
   assert.equal(c.result.cancel_accepted, false);
+});
+
+test('accepted cancellation transitions through unknown to confirmed terminal status', async () => {
+  const f = fixture({ cancel: { stdout: { cancel_accepted: true, cancellation_terminal: false, state: 'cancelled', worker_active: true } } });
+  const args = ['--binary', f.bin, '--database', join(f.dir, 'r.sqlite'), '--id', ID];
+  const cancel = await ops.main(['cancel', ...args]);
+  assert.match(cancel.result.note, /worker_active is false/);
+  f.set({ status: { stdout: { state: 'cancelled', execution_state: 'terminal', worker_active: null } } });
+  const unknown = (await ops.main(['status', ...args])).result;
+  const confirmed = (r) => r.state === 'cancelled' && r.execution_state === 'terminal' && r.worker_active === false;
+  assert.equal(confirmed(unknown), false);
+  f.set({ status: { stdout: { state: 'cancelled', execution_state: 'terminal', worker_active: false } } });
+  assert.equal(confirmed((await ops.main(['status', ...args])).result), true);
+});
+
+test('abnormal process outcomes retain accurate diagnostics', async () => {
+  const f = fixture({ status: { exit: 1, stderr: 'unstructured failure' } });
+  const db = join(f.dir, 'r.sqlite');
+  await rejects(ops.op(f.bin, db, 'status', ['--id', ID]), 'operation_failed');
+  f.set({ status: { signal: 'SIGKILL' } });
+  await rejects(ops.op(f.bin, db, 'status', ['--id', ID]), 'operation_failed');
+  f.set({ status: { stdout: 'x'.repeat(2048) } });
+  await rejects(ops.op(f.bin, db, 'status', ['--id', ID], { maxBuffer: 100 }), 'bad_output');
+});
+
+test('documented helper path works outside the plugin with spaces in its path', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'plugin path '));
+  const plugin = join(dir, 'plugin root');
+  mkdirSync(join(plugin, 'bin'), { recursive: true });
+  cpSync(HELPER, join(plugin, 'bin', 'seosmith-ops.mjs'));
+  const shell = 'node "${CLAUDE_PLUGIN_ROOT}/bin/seosmith-ops.mjs" prepare --root "$AUDIT_ROOT" --url https://example.com/ --pages 2 --resources 0 --duration 10 --delay-ms 1000';
+  const out = execFileSync('/bin/sh', ['-c', shell], { cwd: tmpdir(), env: { ...process.env, CLAUDE_PLUGIN_ROOT: plugin, AUDIT_ROOT: join(dir, 'audits') }, encoding: 'utf8' });
+  assert.equal(JSON.parse(out).ok, true);
+  const skill = readFileSync(join(dirname(HELPER), '../skills/seosmith-operations/SKILL.md'), 'utf8');
+  for (const command of ['prepare', 'start', 'status', 'cancel', 'report', 'export']) assert.ok(skill.includes(`node "\${CLAUDE_PLUGIN_ROOT}/bin/seosmith-ops.mjs" ${command}`), command);
 });
 
 test('report keeps partial coverage visible and fails explicitly when unavailable or oversized', async () => {

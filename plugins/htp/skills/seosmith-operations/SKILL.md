@@ -38,11 +38,11 @@ Confirm with the user: the exact seed URL (no credentials, query, fragment or cu
 the exact host), pages, resources, duration (10–7200 s), delay (1000–60000 ms) and whether to check
 external links. Every bound is required; there are no defaults. Then:
 
-1. `seosmith-ops.mjs prepare --root <absolute private dir> --url … --pages N --resources N --duration S --delay-ms MS`
+1. `node "${CLAUDE_PLUGIN_ROOT}/bin/seosmith-ops.mjs" prepare --root <absolute private dir> --url … --pages N --resources N --duration S --delay-ms MS`
    creates a 0700 audit directory, a 0600 request and a fresh request ID and database.
-2. `seosmith-ops.mjs start --database <database> --request <request>` is synchronous. Run it with the
+2. `node "${CLAUDE_PLUGIN_ROOT}/bin/seosmith-ops.mjs" start --database <database> --request <request>` is synchronous. Run it with the
    Bash tool's background option, because a crawl can last up to its duration bound.
-3. Poll `status --database … --id …` from a separate invocation at a bounded interval.
+3. Poll `node "${CLAUDE_PLUGIN_ROOT}/bin/seosmith-ops.mjs" status --database <database> --id <id>` from a separate invocation at a bounded interval.
 
 A new intended audit needs a fresh `prepare`. Retry only the exact same request file after an
 uncertain start (for example a helper timeout); it returns existing status and never re-crawls.
@@ -58,12 +58,15 @@ Never retry with a new ID automatically.
 
 ## 4. Cancel, retrieve and export
 
-- `cancel` only when asked. an accepted cancellation is not termination: report the run as stopped only
-  when `cancellation_terminal` is true; otherwise poll `status`.
-- `report` returns the exact retained report. Keep `schema_version`, `outcome`, `stop_reason`,
+- Cancel only when asked: `node "${CLAUDE_PLUGIN_ROOT}/bin/seosmith-ops.mjs" cancel --database <database> --id <id>`.
+  An accepted cancellation is not termination. A cancel response with `cancellation_terminal: true` confirms
+  termination. Otherwise poll status at a bounded interval and report stopped only if `state` is `cancelled`,
+  `execution_state` is `terminal`, and `worker_active` is exactly `false`. Null, missing or unknown values
+  do not confirm termination; stop polling after a bounded period and report the outcome as unconfirmed.
+- `node "${CLAUDE_PLUGIN_ROOT}/bin/seosmith-ops.mjs" report --database <database> --id <id>` returns the exact retained report. Keep `schema_version`, `outcome`, `stop_reason`,
   `coverage_complete` and partial coverage visible. Unavailable or oversized reports (16 MiB limit)
   are failures, not empty audits.
-- `export --output <new absolute file>` writes to a path that must not exist and returns a byte
+- `node "${CLAUDE_PLUGIN_ROOT}/bin/seosmith-ops.mjs" export --database <database> --id <id> --output <new absolute file>` writes to a path that must not exist and returns a byte
   count and SHA-256. An export without that receipt is not verified.
 
 ## 5. Failure handling
