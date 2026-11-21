@@ -29,7 +29,7 @@ stored in the plugin.
 - `website-management` — add, rename or delete websites; GA4 and Business Profile bindings; Seosmith audits
 - `repository-settings` — attach, pause or remove a website's public GitHub repository
 
-The four shared skill files are checked against the pinned HTP 1.1 source snapshot. Run `node scripts/check-claude-contract.mjs` and `node scripts/check-provider-request-readiness.mjs`. This is offline readiness only: provider lifecycle use requires backend capability and live host verification; SEOsmith operations remain gated on host adapter live acceptance. Host issue #1 remains open. See [compatibility](docs/compatibility-claude.md) for limits.
+The four shared skill files are checked against the pinned HTP 1.2 source snapshot (complete audit export, contract 1.2.0). Run `node scripts/check-claude-contract.mjs`, `node scripts/check-provider-request-readiness.mjs` and `node scripts/check-audit-export-readiness.mjs`; the export tests are `node --test scripts/test-audit-export-readiness.mjs`. This is offline readiness only: provider lifecycle use requires backend capability and live host verification; SEOsmith operations remain gated on host adapter live acceptance. Host issue #1 remains open. See [compatibility](docs/compatibility-claude.md) for limits.
 
 ## License
 

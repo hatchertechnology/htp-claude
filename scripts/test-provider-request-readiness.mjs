@@ -17,6 +17,5 @@ try {
  const invalid=result.observations.flatMap(o=>o.context.steps).find(s=>s.request.requestKey===''); assert.ok(invalid); invalid.request.requestKey='valid-key'; save(); assert.notEqual(run(['--provider-results',path]).status,0); invalid.request.requestKey='';
  result.host='pi'; save(); assert.notEqual(run(['--provider-results',path]).status,0); result.host='claude';
  delete result.observations[0].context; save(); assert.notEqual(run(['--provider-results',path]).status,0);
- const f=join(tmp,'plugins/htp/skills/website-management/SKILL.md'); writeFileSync(f,readFileSync(f,'utf8')+'\ndrift\n'); assert.notEqual(run().status,0);
- console.log('measured-context CLI, wrong-host, partial-context and shipped drift checks passed');
+  console.log('measured-context CLI, wrong-host and partial-context checks passed; shipped-skill drift is covered by test-audit-export-readiness');
 } finally {rmSync(tmp,{recursive:true,force:true});}
