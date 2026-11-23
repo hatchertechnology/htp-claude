@@ -10,7 +10,7 @@ criteria at the end of this page are met with live evidence.
 
 | Item | Value |
 | --- | --- |
-| Claude Code tested | 2.1.330 (lifecycle and validation below); 2.1.325 for earlier readiness work |
+| Claude Code tested | 2.1.331 (canonical Git marketplace lifecycle and controlled upgrade); 2.1.330 (local-directory lifecycle and validation); 2.1.325 for earlier readiness work |
 | Minimum version | Not yet verified. Do not rely on a minimum until it is tested. |
 | Plugin version | 1.2.0 (`plugins/htp/.claude-plugin/plugin.json`, matches the marketplace entry) |
 | Install id | `htp@htp` (plugin `htp`, marketplace `htp`) |
@@ -62,20 +62,90 @@ Install from the marketplace:
 From a shell: `claude plugin marketplace add hatchertechnology/htp-claude` and
 `claude plugin install htp@htp`.
 
-Lifecycle commands verified on Claude Code 2.1.330 in an isolated `CLAUDE_CONFIG_DIR`
-(see `docs/host-verification-claude.md` for transcripts and limits):
+Lifecycle commands tested in isolated `CLAUDE_CONFIG_DIR` profiles (see
+[host verification](host-verification-claude.md) for exact refs and limits):
 
 | Action | Command |
 | --- | --- |
 | Install | `claude plugin marketplace add hatchertechnology/htp-claude` then `claude plugin install htp@htp` |
-| Upgrade | `claude plugin marketplace update htp` then `claude plugin update htp@htp`, then restart or `/reload-plugins` |
+| Upgrade | `claude plugin marketplace update htp` then `claude plugin update htp@htp`, then restart or `/reload-plugins`. A real 1.1.0 → 1.2.0 CLI transition passed on a controlled smart-Git mirror; canonical unchanged-main checks were no-ops. Session reload was not tested. |
 | Uninstall | `claude plugin uninstall htp@htp`; optionally `claude plugin marketplace remove htp` |
-| Rollback | Re-add the marketplace at the previous tag (`claude plugin marketplace add hatchertechnology/htp-claude@v1.1.0`), `claude plugin uninstall htp@htp`, `claude plugin install htp@htp`. Saved HTP data is server-side and is untouched. |
+| Rollback | Source-switch reinstall, with the precautions and post-install revision check below. No published rollback tag was available at verification time. |
 
-Upgrade preserves existing users: the 1.1.0 skills and `.mcp.json` are unchanged in 1.2.0. 1.2.0 adds one
+### Rollback and existing marketplace settings
+
+On Claude Code 2.1.331, adding `htp` from a different ref while its previous
+`extraKnownMarketplaces` declaration remains is rejected as a source mismatch.
+Uninstalling the plugin alone does not remove that declaration. Also,
+`claude plugin marketplace remove htp` uninstalls **all plugins from that
+marketplace** and warns that it deletes their saved options, secrets and data
+where possible. This is a reinstall procedure, not a data-preserving downgrade.
+There is no guarantee of preserving plugin-local data or sign-in. These CLI
+checks did not verify server-side data preservation.
+
+First inspect `claude plugin marketplace list` and `claude plugin list --json`.
+Identify the declaration's scope and any other installed packages from `htp`.
+For a project or managed declaration, have its owner change the source through
+that scope's supported configuration; do not overwrite unrelated settings or
+bypass a managed source restriction. Test a candidate in a fresh isolated
+profile first. Before replacing a user-scope declaration, arrange any required
+backup of target-plugin local state and account for every affected package.
+Stop if the source's ownership or the removal's effects are unclear.
+
+Close every Claude Code session using the target profile before changing the
+marketplace. Use a separate shell for the CLI commands and keep those sessions
+closed until the revision check below succeeds. On 2.1.331, installation enables
+the plugin immediately. If the sequence stops after installation, run the
+disable command and confirm the disabled state before opening a session.
+
+The following commands were verified against the canonical repository for a
+**user-scope** `htp` declaration containing only the target plugin. After the
+last command, confirm that the `htp@htp` entry reports `enabled: false`.
+
+```sh
+claude plugin uninstall htp@htp
+claude plugin marketplace remove htp
+claude plugin marketplace add hatchertechnology/htp-claude@e090c94d7fb11a187b329cb116343c19a29bca7e
+claude plugin install htp@htp
+claude plugin disable htp@htp
+claude plugin list --json
+```
+
+The full commit selector above was tested on 2.1.331 and installed package
+1.1.0 at exactly `e090c94d7fb11a187b329cb116343c19a29bca7e`. The separately
+tested historical ref `@wave0/claude-export-readiness` resolved to that same
+commit, but is a **mutable development branch**, not an immutable pin or release
+tag. No upstream tags were advertised; `@v1.1.0` failed because the ref does
+not exist. Check the installed revision before enabling or restarting with the plugin. The version
+string alone does not identify the installed commit. For this tested user-scope
+installation, the host records it in `plugins/installed_plugins.json`:
+
+```sh
+python3 - <<'PY'
+import json, os
+from pathlib import Path
+root = Path(os.environ.get('CLAUDE_CONFIG_DIR', str(Path.home() / '.claude')))
+records = json.loads((root / 'plugins/installed_plugins.json').read_text())
+entries = [p for p in records['plugins'].get('htp@htp', []) if p['scope'] == 'user']
+expected = 'e090c94d7fb11a187b329cb116343c19a29bca7e'
+if len(entries) != 1 or entries[0].get('gitCommitSha') != expected or entries[0].get('version') != '1.1.0':
+    raise SystemExit('Installed revision/version mismatch; keep htp disabled and investigate')
+print('Verified htp 1.1.0 at', expected)
+PY
+```
+
+Only after that check succeeds, run `claude plugin enable htp@htp`, then
+restart or `/reload-plugins`. If using a branch instead, do not accept a moved
+revision merely because it still reports 1.1.0. The registry check is an
+observed host implementation detail for 2.1.331; fail closed if the field is
+missing. This procedure verifies rollback by commit. A release-tag procedure
+requires a published tag and its own verification. Return to main through the same reviewed uninstall/remove/
+add/install process and verify its intended revision before enabling.
+
+The 1.1.0 skills and `.mcp.json` are unchanged in 1.2.0. 1.2.0 adds one
 skill (`seosmith-operations`) and one helper (`bin/seosmith-ops.mjs`). Sign-in is stored by the host, not
 the plugin, so uninstall/reinstall may require signing in again. Minimum supported version stays
-unverified; 2.1.330 is the tested floor. The plugin version in `plugin.json` and the marketplace entry must
+unverified; the tested versions above are evidence, not a minimum-version guarantee. The plugin version in `plugin.json` and the marketplace entry must
 always match; the validator and contract checker both check it.
 
 ## Skills
