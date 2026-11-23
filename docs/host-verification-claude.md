@@ -1,8 +1,6 @@
 # Claude host verification record (Wave 1)
 
 Evidence kinds are kept separate. Nothing here is production verification.
-The complete distribution command/result record is in
-[the distribution acceptance report](distribution-acceptance-2026-11-23.md).
 
 ## Git distribution checks (Claude Code 2.1.331, 2026-11-23)
 
