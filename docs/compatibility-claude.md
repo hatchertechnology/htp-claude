@@ -92,8 +92,15 @@ profile first. Before replacing a user-scope declaration, arrange any required
 backup of target-plugin local state and account for every affected package.
 Stop if the source's ownership or the removal's effects are unclear.
 
-For an existing **user-scope** `htp` declaration containing only the target
-plugin, this sequence was verified against the canonical GitHub repository:
+Close every Claude Code session using the target profile before changing the
+marketplace. Use a separate shell for the CLI commands and keep those sessions
+closed until the revision check below succeeds. On 2.1.331, installation enables
+the plugin immediately. If the sequence stops after installation, run the
+disable command and confirm the disabled state before opening a session.
+
+The following commands were verified against the canonical repository for a
+**user-scope** `htp` declaration containing only the target plugin. After the
+last command, confirm that the `htp@htp` entry reports `enabled: false`.
 
 ```sh
 claude plugin uninstall htp@htp
@@ -131,8 +138,8 @@ Only after that check succeeds, run `claude plugin enable htp@htp`, then
 restart or `/reload-plugins`. If using a branch instead, do not accept a moved
 revision merely because it still reports 1.1.0. The registry check is an
 observed host implementation detail for 2.1.331; fail closed if the field is
-missing. A published, verified previous release ref is still needed for release
-rollback acceptance. Return to main through the same reviewed uninstall/remove/
+missing. This procedure verifies rollback by commit. A release-tag procedure
+requires a published tag and its own verification. Return to main through the same reviewed uninstall/remove/
 add/install process and verify its intended revision before enabling.
 
 The 1.1.0 skills and `.mcp.json` are unchanged in 1.2.0. 1.2.0 adds one
