@@ -63,9 +63,10 @@ Never retry with a new ID automatically.
   termination. Otherwise poll status at a bounded interval and report stopped only if `state` is `cancelled`,
   `execution_state` is `terminal`, and `worker_active` is exactly `false`. Null, missing or unknown values
   do not confirm termination; stop polling after a bounded period and report the outcome as unconfirmed.
-- `node "${CLAUDE_PLUGIN_ROOT}/bin/seosmith-ops.mjs" report --database <database> --id <id>` returns the exact retained report. Keep `schema_version`, `outcome`, `stop_reason`,
-  `coverage_complete` and partial coverage visible. Unavailable or oversized reports (16 MiB limit)
-  are failures, not empty audits.
+- `node "${CLAUDE_PLUGIN_ROOT}/bin/seosmith-ops.mjs" report --database <database> --id <id>` returns the retained report as parsed JSON
+  plus its exact byte length. Keep `schema_version`, `outcome`, `stop_reason`, `coverage_complete` and partial coverage
+  visible. The parsed object is not a byte-for-byte copy; use `export` when exact retained bytes matter. Unavailable or
+  oversized reports (16 MiB limit) are failures, not empty audits.
 - `node "${CLAUDE_PLUGIN_ROOT}/bin/seosmith-ops.mjs" export --database <database> --id <id> --output <new absolute file>` writes to a path that must not exist and returns a byte
   count and SHA-256. An export without that receipt is not verified.
 

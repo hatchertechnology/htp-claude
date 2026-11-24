@@ -12,9 +12,10 @@ criteria at the end of this page are met with live evidence.
 | --- | --- |
 | Claude Code tested | 2.1.331 (canonical Git marketplace lifecycle and controlled upgrade); 2.1.330 (local-directory lifecycle and validation); 2.1.325 for earlier readiness work |
 | Minimum version | Not yet verified. Do not rely on a minimum until it is tested. |
-| Plugin version | 1.2.0 (`plugins/htp/.claude-plugin/plugin.json`, matches the marketplace entry) |
+| Plugin version | 1.2.1 (`plugins/htp/.claude-plugin/plugin.json`, matches the marketplace entry) |
 | Install id | `htp@htp` (plugin `htp`, marketplace `htp`) |
 | Validation | `claude plugin validate ./plugins/htp` and `claude plugin validate .` pass |
+| Installed-package SEOsmith helper acceptance | Passed on 2.1.331: the shipped helper run from the installed plugin directory against a real adapter-v1 binary and seeded stored state produced report content, byte-exact export and terminal cancellation |
 
 `claude plugin validate` reports two plugin-directory listing warnings, `ICON_MISSING` and
 `PRIVACY_URL_MISSING`. They do not affect loading. They are needed only for submission to
@@ -68,7 +69,7 @@ Lifecycle commands tested in isolated `CLAUDE_CONFIG_DIR` profiles (see
 | Action | Command |
 | --- | --- |
 | Install | `claude plugin marketplace add hatchertechnology/htp-claude` then `claude plugin install htp@htp` |
-| Upgrade | `claude plugin marketplace update htp` then `claude plugin update htp@htp`, then restart or `/reload-plugins`. A real 1.1.0 → 1.2.0 CLI transition passed on a controlled smart-Git mirror; canonical unchanged-main checks were no-ops. Session reload was not tested. |
+| Upgrade | `claude plugin marketplace update htp` then `claude plugin update htp@htp`, then restart or `/reload-plugins`. A real 1.1.0 → 1.2.0 CLI transition passed on a controlled smart-Git mirror; canonical unchanged-main checks were no-ops. The 1.2.0 → 1.2.1 step uses the same procedure and was not separately exercised. Session reload was not tested. |
 | Uninstall | `claude plugin uninstall htp@htp`; optionally `claude plugin marketplace remove htp` |
 | Rollback | Source-switch reinstall, with the precautions and post-install revision check below. No published rollback tag was available at verification time. |
 
@@ -143,7 +144,10 @@ requires a published tag and its own verification. Return to main through the sa
 add/install process and verify its intended revision before enabling.
 
 The 1.1.0 skills and `.mcp.json` are unchanged in 1.2.0. 1.2.0 adds one
-skill (`seosmith-operations`) and one helper (`bin/seosmith-ops.mjs`). Sign-in is stored by the host, not
+skill (`seosmith-operations`) and one helper (`bin/seosmith-ops.mjs`). 1.2.1
+keeps the same skills and MCP declaration and makes the helper entry guard
+resolve real paths, so the helper also runs when the plugin directory is reached
+through a symlink. Sign-in is stored by the host, not
 the plugin, so uninstall/reinstall may require signing in again. Minimum supported version stays
 unverified; the tested versions above are evidence, not a minimum-version guarantee. The plugin version in `plugin.json` and the marketplace entry must
 always match; the validator and contract checker both check it.
@@ -207,7 +211,7 @@ Evidence v2, authorized staging and baseline CI are advertised false by adapter 
 | Website management and bindings | Available |
 | Repository settings | Available |
 | HTP audit import and history | Available |
-| SEOsmith explicit start, status, cancel, report, export (local) | Implemented; fixture and real-binary non-crawl tests pass; a live crawl through a Claude session is **not yet accepted** |
+| SEOsmith explicit start, status, cancel, report, export (local) | Implemented; fixture and real-binary non-crawl tests pass, and the installed-package helper passed report content, byte-exact export and terminal cancellation on seeded stored state; a live crawl through a Claude session is **not yet accepted** |
 | Standalone local SEOsmith audit | Same as above; needs a configured binary, no HTP account |
 | Baseline-aware CI and staging profiles | Unsupported until a backend release ships them |
 | Forms, orchestration, browser or AI workflows | Unsupported until backend releases ship them |
@@ -217,6 +221,8 @@ Evidence v2, authorized staging and baseline CI are advertised false by adapter 
 Open until all hold with recorded live evidence: (1) real OAuth sign-in, reconnect and sign-out through `/mcp`
 in an interactive session, plus a denied-website read that stays denied; (2) a live local SEOsmith
 start/status/cancel/report/export through a Claude session with a trusted binary (bounded, isolated data);
+the installed-package helper path on seeded data is already verified, so this gate is specifically the
+live crawl and live-session invocation.
 (3) deployed export-v1 and report-request tools discovered, then exercised; (4) two independent exact-head
 reviews and merge by the integration owner; (5) tagged release for rollback. Gated skills for forms,
 lifecycle, remediation, provider outcomes, browser/AI workflows and baseline CI are **not** shipped: no
@@ -235,6 +241,6 @@ These checks validate the package's declared contract. They do not prove that a 
 sign-in, a live tool call or a live SEOsmith operation works. Those need host smoke tests
 against the deployed service.
 
-The separate contract 1.2.0 audit-export readiness snapshot is offline evidence, distinct from package version 1.2.0. Its checks run with `node scripts/check-audit-export-readiness.mjs` (`--export-results PATH` accepts Claude measured results) and `node --test scripts/test-audit-export-readiness.mjs`. Complete audit export is gated: it requires discovered deployed `website_audit_export_start_v1`, `_chunk_v1` and `_close_v1` tools, a verified backend, and host acceptance. Small `website_audit_detail` results are unchanged; a large unsafe result returns `EXPORT_REQUIRED`, which Claude hosts must follow to the export workflow.
+The separate contract 1.2.0 audit-export readiness snapshot is offline evidence, distinct from package version 1.2.1. Its checks run with `node scripts/check-audit-export-readiness.mjs` (`--export-results PATH` accepts Claude measured results) and `node --test scripts/test-audit-export-readiness.mjs`. Complete audit export is gated: it requires discovered deployed `website_audit_export_start_v1`, `_chunk_v1` and `_close_v1` tools, a verified backend, and host acceptance. Small `website_audit_detail` results are unchanged; a large unsafe result returns `EXPORT_REQUIRED`, which Claude hosts must follow to the export workflow.
 
-The separate contract 1.1.0 readiness snapshot is offline evidence, distinct from package version 1.2.0. Run `node scripts/check-provider-request-readiness.mjs` for synthetic traces or add `--provider-results PATH` for Claude results. Measured context and counters require independent provenance. Neither this check nor the source lock proves deployment, OAuth, live host normalization or lifecycle behavior; host issue #1 remains open. HTP lifecycle and SEOsmith host adapter live acceptance gates both remain in force.
+The separate contract 1.1.0 readiness snapshot is offline evidence, distinct from package version 1.2.1. Run `node scripts/check-provider-request-readiness.mjs` for synthetic traces or add `--provider-results PATH` for Claude results. Measured context and counters require independent provenance. Neither this check nor the source lock proves deployment, OAuth, live host normalization or lifecycle behavior; host issue #1 remains open. HTP lifecycle and SEOsmith host adapter live acceptance gates both remain in force.
