@@ -11,7 +11,7 @@ import { execFile } from 'node:child_process';
 import { accessSync, constants, existsSync, mkdirSync, realpathSync, statSync, readFileSync, writeFileSync, chmodSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { isAbsolute, join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export const ADAPTER_VERSION = 1;
 export const REQUIRED_OPERATIONS = ['seosmith.start', 'seosmith.status', 'seosmith.cancel', 'seosmith.report', 'seosmith.export'];
@@ -209,7 +209,16 @@ export async function main(argv, env = process.env) {
   return fail('invalid_argument', `Unknown command: ${command}. Use modes, capabilities, prepare, start, status, cancel, report or export.`);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+// True when this file is the invoked entry point, including when it is reached
+// through a symlinked plugin directory. Node resolves import.meta.url to the
+// real path, so compare real paths rather than the raw argv path.
+export function isMainModule(argv1 = process.argv[1], moduleUrl = import.meta.url) {
+  if (!argv1) return false;
+  try { return realpathSync(argv1) === realpathSync(fileURLToPath(moduleUrl)); }
+  catch { return moduleUrl === pathToFileURL(argv1).href; }
+}
+
+if (isMainModule()) {
   main(process.argv.slice(2)).then(
     (out) => { process.stdout.write(`${JSON.stringify({ ok: true, ...out })}\n`); },
     (e) => {

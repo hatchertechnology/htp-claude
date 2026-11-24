@@ -4,7 +4,7 @@
 // group runs against a real binary only when SEOSMITH_REAL_BIN is set; it never starts a crawl.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, readFileSync, existsSync, chmodSync, statSync, mkdirSync, cpSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, existsSync, chmodSync, statSync, mkdirSync, cpSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -187,6 +187,27 @@ test('documented helper path works outside the plugin with spaces in its path', 
   assert.equal(JSON.parse(out).ok, true);
   const skill = readFileSync(join(dirname(HELPER), '../skills/seosmith-operations/SKILL.md'), 'utf8');
   for (const command of ['prepare', 'start', 'status', 'cancel', 'report', 'export']) assert.ok(skill.includes(`node "\${CLAUDE_PLUGIN_ROOT}/bin/seosmith-ops.mjs" ${command}`), command);
+});
+
+test('helper runs when the plugin is reached through a symlinked directory', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'plugin-link-'));
+  const plugin = join(dir, 'plugin root');
+  mkdirSync(join(plugin, 'bin'), { recursive: true });
+  cpSync(HELPER, join(plugin, 'bin', 'seosmith-ops.mjs'));
+  // A symlinked plugin root must still execute the CLI, not silently no-op. Node
+  // resolves import.meta.url to the real path, so the entry guard must compare
+  // real paths (regression for the reviewed P3 symlink finding).
+  const linked = join(dir, 'linked plugin');
+  symlinkSync(plugin, linked, 'dir');
+  const linkedHelper = join(linked, 'bin', 'seosmith-ops.mjs');
+  const direct = execFileSync(process.execPath, [linkedHelper, 'modes'], { env: { PATH: process.env.PATH }, encoding: 'utf8' });
+  const parsed = JSON.parse(direct);
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.local.available, false);
+  // The documented ${CLAUDE_PLUGIN_ROOT} form through the symlinked root.
+  const shell = 'node "${CLAUDE_PLUGIN_ROOT}/bin/seosmith-ops.mjs" modes';
+  const viaShell = execFileSync('/bin/sh', ['-c', shell], { cwd: tmpdir(), env: { ...process.env, CLAUDE_PLUGIN_ROOT: linked }, encoding: 'utf8' });
+  assert.equal(JSON.parse(viaShell).ok, true);
 });
 
 test('report keeps partial coverage visible and fails explicitly when unavailable or oversized', async () => {

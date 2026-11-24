@@ -37,6 +37,38 @@ The controlled mirror advanced only a local branch from
 package edits. Its loopback HTTP server was stopped after testing. All other
 live-host and release gates below remain open.
 
+## Installed-package SEOsmith helper acceptance (seeded, offline, 2026-11-24)
+
+An ordinary canonical install was created in a fresh isolated `CLAUDE_CONFIG_DIR`
+(Claude Code 2.1.331) from `hatchertechnology/htp-claude` at main
+`878f6fdd0d35becc2e3c1062f9efbc8507a8240a` (package 1.2.0). The shipped helper was
+then run through the documented `node "${CLAUDE_PLUGIN_ROOT}/bin/seosmith-ops.mjs"`
+form, with `CLAUDE_PLUGIN_ROOT` set to the installed plugin directory, against a
+real SEOsmith adapter-v1 binary built from `hatchertechnology/seosmith` main
+`ac07f496c443fff0e922b60093cc7a2c0a90eeaa` (`seosmith 0.2.0`, binary SHA-256
+`f81a85a42e131b7b8c00ebb1738c0f355988cf9e230600dbce8ec1bf624eca63`).
+
+No crawl was started and no model session was run. Two disposable SQLite
+databases carried seeded, synthetic stored jobs in the adapter's operations
+schema. All checks passed:
+
+- report content matched the retained report and the helper reported its exact byte length;
+- export produced a file byte-for-byte equal to the retained report, with a matching byte count and SHA-256 receipt;
+- cancellation of a seeded running job returned `cancellation_terminal: true`, and a following status reported `state: cancelled`, `execution_state: terminal`, `worker_active: false`; a second cancel reported `cancel_accepted: false`.
+
+This verifies the installed-package helper path on saved data with a real binary.
+It does not verify a live crawl, a live Claude skill invocation, `${CLAUDE_PLUGIN_ROOT}`
+substitution inside a running session, or HTP authorization. The seeded state is
+not production evidence.
+
+### Symlinked plugin root
+
+The 1.2.0 helper's CLI entry guard compared the unresolved argv path with the
+resolved module URL, so invoking it through a symlinked plugin directory exited 0
+with no output. 1.2.1 compares real paths. The unit suite covers a symlinked plugin
+root, and a direct probe of the installed 1.2.0 helper through a symlink reproduced
+the silent no-op before the fix.
+
 ## Real host checks (Claude Code 2.1.330, isolated `CLAUDE_CONFIG_DIR`, local-directory marketplace)
 
 - `claude plugin validate .` and `claude plugin validate ./plugins/htp`: passed.
@@ -53,11 +85,12 @@ live-host and release gates below remain open.
   the immutable historical commit is supported but is not a tagged release.
 - Minimum supported Claude Code version. Tested 2.1.330 and 2.1.331 lifecycle
   checks do not establish a minimum.
-- `${CLAUDE_PLUGIN_ROOT}` substitution inside `SKILL.md` text in a live session (no live skill invocation was run).
+- `${CLAUDE_PLUGIN_ROOT}` substitution inside `SKILL.md` text in a live session. The installed-cache helper path is
+  now verified directly (see above); a live skill invocation transcript is not.
 - Interactive OAuth sign-in, reconnect, sign-out, auth expiry and denied-website behavior (needs a browser session).
-- A live SEOsmith crawl through a Claude session. Real-adapter tests cover capabilities and rejection paths only and never
-  start a crawl (`SEOSMITH_REAL_BIN=<path> node --test scripts/test-seosmith-ops.mjs`, run against a locally built seosmith
-  debug binary reporting adapter_version 1).
+- A live SEOsmith crawl through a Claude session. Real-adapter tests and the installed-package seeded acceptance cover
+  capabilities, rejection paths, report/export equality and terminal cancellation, but never start a crawl
+  (`SEOSMITH_REAL_BIN=<path> node --test scripts/test-seosmith-ops.mjs`).
 - Deployed export-v1 and report-request tool discovery and use.
 
 ## Fixture tests (synthetic, not production evidence)
