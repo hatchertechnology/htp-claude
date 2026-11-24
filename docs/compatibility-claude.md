@@ -12,7 +12,7 @@ criteria at the end of this page are met with live evidence.
 | --- | --- |
 | Claude Code tested | 2.1.331 (canonical Git marketplace lifecycle and controlled upgrade); 2.1.330 (local-directory lifecycle and validation); 2.1.325 for earlier readiness work |
 | Minimum version | Not yet verified. Do not rely on a minimum until it is tested. |
-| Plugin version | 1.2.1 (`plugins/htp/.claude-plugin/plugin.json`, matches the marketplace entry) |
+| Plugin version | 1.2.2 (`plugins/htp/.claude-plugin/plugin.json`, matches the marketplace entry) |
 | Install id | `htp@htp` (plugin `htp`, marketplace `htp`) |
 | Validation | `claude plugin validate ./plugins/htp` and `claude plugin validate .` pass |
 | Installed-package SEOsmith helper acceptance | Passed on 2.1.331: the shipped helper run from the installed plugin directory against a real adapter-v1 binary and seeded stored state produced report content, byte-exact export and terminal cancellation |
@@ -69,7 +69,7 @@ Lifecycle commands tested in isolated `CLAUDE_CONFIG_DIR` profiles (see
 | Action | Command |
 | --- | --- |
 | Install | `claude plugin marketplace add hatchertechnology/htp-claude` then `claude plugin install htp@htp` |
-| Upgrade | `claude plugin marketplace update htp` then `claude plugin update htp@htp`, then restart or `/reload-plugins`. A real 1.1.0 → 1.2.0 CLI transition passed on a controlled smart-Git mirror; canonical unchanged-main checks were no-ops. The 1.2.0 → 1.2.1 step uses the same procedure and was not separately exercised. Session reload was not tested. |
+| Upgrade | `claude plugin marketplace update htp` then `claude plugin update htp@htp`, then restart or `/reload-plugins`. A real 1.1.0 → 1.2.0 CLI transition passed on a controlled smart-Git mirror; canonical unchanged-main checks were no-ops. The 1.2.1 → 1.2.2 CLI transition is verified on a controlled smart-Git mirror with exact installed bytes and registry revision; see host verification. Session reload was not tested. |
 | Uninstall | `claude plugin uninstall htp@htp`; optionally `claude plugin marketplace remove htp` |
 | Rollback | Source-switch reinstall, with the precautions and post-install revision check below. No published rollback tag was available at verification time. |
 
@@ -147,7 +147,7 @@ The 1.1.0 skills and `.mcp.json` are unchanged in 1.2.0. 1.2.0 adds one
 skill (`seosmith-operations`) and one helper (`bin/seosmith-ops.mjs`). 1.2.1
 keeps the same skills and MCP declaration and makes the helper entry guard
 resolve real paths, so the helper also runs when the plugin directory is reached
-through a symlink. Sign-in is stored by the host, not
+through a symlink. 1.2.2 packages the additive gated audit-read skills from the 1.3 contract snapshot. It bumps both package manifests so an existing 1.2.1 installation can receive those changed bytes through the normal upgrade commands. Sign-in is stored by the host, not
 the plugin, so uninstall/reinstall may require signing in again. Minimum supported version stays
 unverified; the tested versions above are evidence, not a minimum-version guarantee. The plugin version in `plugin.json` and the marketplace entry must
 always match; the validator and contract checker both check it.
@@ -244,8 +244,8 @@ These checks validate the package's declared contract. They do not prove that a 
 sign-in, a live tool call or a live SEOsmith operation works. Those need host smoke tests
 against the deployed service.
 
-The separate contract 1.2.0 audit-export readiness snapshot is offline evidence, distinct from package version 1.2.1. Its checks run with `node scripts/check-audit-export-readiness.mjs` (`--export-results PATH` accepts Claude measured results) and `node --test scripts/test-audit-export-readiness.mjs`. Complete audit export is gated: it requires discovered deployed `website_audit_export_start_v1`, `_chunk_v1` and `_close_v1` tools, a verified backend, and host acceptance. Small `website_audit_detail` results are unchanged; a large unsafe result returns `EXPORT_REQUIRED`, which Claude hosts must follow to the export workflow.
+The separate contract 1.2.0 audit-export readiness snapshot is offline evidence, distinct from package version 1.2.2. Its checks run with `node scripts/check-audit-export-readiness.mjs` (`--export-results PATH` accepts Claude measured results) and `node --test scripts/test-audit-export-readiness.mjs`. Complete audit export is gated: it requires discovered deployed `website_audit_export_start_v1`, `_chunk_v1` and `_close_v1` tools, a verified backend, and host acceptance. Small `website_audit_detail` results are unchanged; a large unsafe result returns `EXPORT_REQUIRED`, which Claude hosts must follow to the export workflow.
 
-The separate contract 1.1.0 readiness snapshot is offline evidence, distinct from package version 1.2.1. Run `node scripts/check-provider-request-readiness.mjs` for synthetic traces or add `--provider-results PATH` for Claude results. Measured context and counters require independent provenance. Neither this check nor the source lock proves deployment, OAuth, live host normalization or lifecycle behavior; host issue #1 remains open. HTP lifecycle and SEOsmith host adapter live acceptance gates both remain in force.
+The separate contract 1.1.0 readiness snapshot is offline evidence, distinct from package version 1.2.2. Run `node scripts/check-provider-request-readiness.mjs` for synthetic traces or add `--provider-results PATH` for Claude results. Measured context and counters require independent provenance. Neither this check nor the source lock proves deployment, OAuth, live host normalization or lifecycle behavior; host issue #1 remains open. HTP lifecycle and SEOsmith host adapter live acceptance gates both remain in force.
 
-The separate additive audit read 1.3.0 readiness snapshot is offline evidence, distinct from package version 1.2.1. Its checks run with `node scripts/check-audit-read-readiness.mjs` (`--audit-read-results PATH` accepts Claude measured results) and `node --test scripts/test-audit-read-readiness.mjs`. Both reads are gated: a missing tool is `unsupported`, and a discovered tool returns `availability:producer_unavailable` while the H15 producer gates are disabled. That state is never an empty history or a zero count. No host auth, backend, producer or installed-skill run is exercised.
+The separate additive audit read 1.3.0 readiness snapshot is offline evidence, distinct from package version 1.2.2. Its checks run with `node scripts/check-audit-read-readiness.mjs` (`--audit-read-results PATH` accepts Claude measured results) and `node --test scripts/test-audit-read-readiness.mjs`. Both reads are gated: a missing tool is `unsupported`, and a discovered tool returns `availability:producer_unavailable` while the H15 producer gates are disabled. That state is never an empty history or a zero count. No host auth, backend, producer or installed-skill run is exercised.

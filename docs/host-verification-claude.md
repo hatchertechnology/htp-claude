@@ -37,6 +37,29 @@ The controlled mirror advanced only a local branch from
 package edits. Its loopback HTTP server was stopped after testing. All other
 live-host and release gates below remain open.
 
+## Gated audit-read package upgrade (offline CLI, 2026-11-24)
+
+The additive audit-read skill sync merged in PR8 left the package at 1.2.1.
+On Claude Code 2.1.331, advancing a controlled smart-Git mirror from PR7
+`9b862ea946269c8ef91707eb97df034a62014d87` to PR8 with that same version let
+both update commands exit 0 while the installed registry revision and skill
+bytes remained at PR7. Successful command exit alone did not establish an upgrade.
+
+Package 1.2.2 advances both the marketplace entry and plugin manifest. An isolated
+user-scope installation from PR7 was advanced to this package through ordinary
+`claude plugin marketplace update htp` and `claude plugin update htp@htp` on a
+loopback smart-Git mirror. Acceptance checks compare every installed file with
+the exact tested Git tree, assert the new registry revision and version, verify
+the changed website-management skill contains both gated read tools, and check
+that `installedAt` is unchanged. The unrelated fixture plugin registry, enabled
+setting, cached files and saved-data/profile sentinels are preserved across the
+update and target cleanup.
+
+This is controlled-mirror package acceptance with no inference, login, MCP call
+or live credential. It does not establish canonical-main advancement, session
+reload, tool discovery, producer availability, OAuth or a tagged release. All
+remaining live-host gates below stay open.
+
 ## Installed-package SEOsmith helper acceptance (seeded, offline, 2026-11-24)
 
 An ordinary canonical install was created in a fresh isolated `CLAUDE_CONFIG_DIR`
