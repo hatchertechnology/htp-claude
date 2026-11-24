@@ -20,11 +20,16 @@ const readJson = (rel) => {
   }
 };
 
-// HTP MCP tools exposed by the server (18). Tools a skill may reference must be in this set.
+// HTP MCP tools exposed by the server (20). Tools a skill may reference must be in this set.
+// website_audit_events and website_operational_episodes are additive 1.3 reads.
+// The deployed 23-tool host does not expose them, so a missing tool stays
+// unsupported; a discovered 25-tool host returns availability:producer_unavailable
+// while the H15 producer gates are disabled, never an empty success.
 const HTP_TOOLS = new Set([
   'list_websites', 'get_website', 'create_website', 'update_website', 'delete_website',
   'set_website_ga4_property', 'set_website_business_location', 'set_website_repository',
   'request_website_report', 'website_saved_data', 'website_audit_history', 'website_audit_detail',
+  'website_audit_events', 'website_operational_episodes',
   'import_website_audit', 'get_provider_connection', 'disconnect_provider', 'inspect_website_url',
   'website_repository_history', 'hello_world_secured',
 ]);
@@ -153,10 +158,11 @@ notes.push(
     `only in references/: ${onlyInReferences.join(', ') || 'none'}`,
 );
 
-// 4. Mandatory pinned source and shipped skill parity (1.1 snapshot, then 1.2 current pin)
+// 4. Mandatory pinned source and shipped skill parity (1.1 snapshot, 1.2 current
+// pin, additive 1.3 gated read readiness)
 try { execFileSync(process.execPath, [join(root, 'scripts/check-provider-request-readiness.mjs')], {stdio: 'pipe'}); }
 catch (err) { fail(`provider readiness parity failed: ${err.stderr?.toString() || err.message}`); }
-for (const script of ['scripts/check-audit-export-readiness.mjs']) {
+for (const script of ['scripts/check-audit-export-readiness.mjs', 'scripts/check-audit-read-readiness.mjs']) {
   try { execFileSync(process.execPath, [join(root, script)], {stdio: 'pipe'}); }
   catch (err) { fail(`${script} failed: ${err.stderr?.toString() || err.message}`); }
 }

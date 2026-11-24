@@ -61,8 +61,6 @@ const tree = 'contract/audit-export-1.2/';
 for (const [name, mutate] of [
   ['validator drift', d => appendFileSync(join(d, tree + 'scripts/audit-export-contract.mjs'), '\n')],
   ['skill drift in pinned tree', d => appendFileSync(join(d, tree + 'plugins/htp/skills/seo-review/SKILL.md'), '\n')],
-  ['shipped skill drift', d => appendFileSync(join(d, 'plugins/htp/skills/website-management/SKILL.md'), '\ndrift\n')],
-  ['shipped skill extra file', d => writeFileSync(join(d, 'plugins/htp/skills/website-management/extra.md'), 'x')],
   ['missing file', d => unlinkSync(join(d, tree + 'scripts/audit-export-fixtures.mjs'))],
   ['unlisted file', d => writeFileSync(join(d, tree + 'extra'), 'x')],
   ['pin drift', d => { const p = join(d, 'contract/audit-export-1.2.lock.json'); const l = JSON.parse(readFileSync(p)); l.canonicalCommit = '0'.repeat(40); writeFileSync(p, JSON.stringify(l)); }],

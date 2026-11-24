@@ -43,25 +43,22 @@ function inventory(dir, prefix = '') {
 }
 assert.deepEqual(inventory(tree).sort(), expected, 'vendored file inventory drift');
 const hash = base => path => createHash('sha256').update(readFileSync(join(base, path))).digest('hex');
-const treeHash = hash(tree), shippedHash = hash(root);
+const treeHash = hash(tree);
 for (const path of expected) assert.equal(treeHash(path), lock.files[path], 'contract drift: ' + path);
 
-// Shipped skills: exactly the four skill files, each equal to the 1.2 pinned bytes.
-const shippedSkills = expected.filter(p => p.startsWith('plugins/'));
-const shippedInventory = dir => readdirSync(dir, { withFileTypes: true }).flatMap(d =>
-  d.isDirectory() ? shippedInventory(join(dir, d.name)) : [join(dir, d.name).slice(root.length)]);
-// Host-specific skills (not in the shared pinned set) are enumerated in scripts/check-claude-contract.mjs.
-assert.deepEqual(shippedInventory(join(root, 'plugins/htp/skills')).filter(f => !f.startsWith('plugins/htp/skills/seosmith-operations/')).sort(), shippedSkills, 'shipped skill inventory drift');
-for (const path of shippedSkills) assert.equal(shippedHash(path), lock.files[path], 'shipped skill drift: ' + path);
+// The 1.2 lock remains the immutable historical source pin. Shipped skills now
+// track the additive 1.3 profile, so shipped-skill parity is verified by
+// scripts/check-audit-read-readiness.mjs against the 1.3 lock. This checker
+// keeps validating the vendored 1.2 source against the 1.2 lock.
+const sourceSkills = expected.filter(p => p.startsWith('plugins/'));
 
 const { exportProfile, exportFixtures, validateExportResults } = await import('../contract/audit-export-1.2/scripts/audit-export-contract.mjs');
 const { syntheticExportResults } = await import('../contract/audit-export-1.2/scripts/audit-export-fixtures.mjs');
 const skills = JSON.parse(readFileSync(join(tree, 'docs/plugin-contract/v1.2/skills.lock.json'), 'utf8'));
 assert.equal(skills.contractVersion, lock.contractVersion);
-assert.deepEqual(skills.files.map(f => f.path).sort(), shippedSkills);
+assert.deepEqual(skills.files.map(f => f.path).sort(), sourceSkills);
 for (const f of skills.files) {
   assert.equal(treeHash(f.path), f.sha256, 'source skill drift: ' + f.path);
-  assert.equal(shippedHash(f.path), f.sha256, 'shipped skill drift: ' + f.path);
 }
 assert.equal(exportProfile.contractVersion, lock.contractVersion);
 assert.equal(exportProfile.backendExportRevision, null, 'canonical checkpoint remains historical');
