@@ -160,28 +160,31 @@ with `name` and `description` frontmatter, and `name` equals its folder name.
 | Skill | Operations |
 | --- | --- |
 | `seo-review` | Reads saved HTP evidence: website list, saved data, repository history, audit history and detail. Reads never start collection. |
-| `website-management` | Website CRUD, GA4 and Business Profile bindings, report requests, provider status, indexed URL inspection, audit import. |
+| `website-management` | Website CRUD, GA4 and Business Profile bindings, report requests, provider status, indexed URL inspection, audit import, and the additive stored audit-event / provider operational-episode reads (`producer_unavailable` while the H15 producer gates are disabled). |
 | `repository-settings` | Attach, pause or remove a website's public repository. |
 | `seosmith-operations` | Host-specific. Explicit bounded SEOsmith start, status, cancel, report and export through the local adapter helper. Not part of the shared pinned set. |
 
-Shared skills are synchronized byte-for-byte with the pinned 1.2 lock; `seosmith-operations` is exempt from
+Shared skills are synchronized byte-for-byte with the current additive 1.3 lock; `seosmith-operations` is exempt from
 those pins and is listed explicitly in `scripts/check-claude-contract.mjs`. To resynchronize, replace the
-vendored `contract/` snapshot and lock together, rerun the three checks, and bump the plugin version.
+vendored `contract/` snapshot and lock together, rerun the checks, and bump the plugin version.
 
-The four shipped skill files match the pinned canonical 1.2 source lock (`contract/audit-export-1.2.lock.json`) at HTP merge `6c065c8327970b0773ba90f163f99a6e56e1e204` (PR 48). The checker requires parity with the pinned snapshot, without a sibling checkout. The 1.1 provider snapshot under `contract/provider-request-1.1/` is retained byte-for-byte as historical evidence; its shipped-skill equality check moved to the 1.2 pin because the shipped skills now carry the export section.
+The four shipped skill files match the additive 1.3 source lock (`contract/audit-reads-1.3.lock.json`) at merged HTP PR #82 revision `4e7dc94e4f92a30fb57e4061fa1f06d517157c63` (tree `36a9456c6e2a819e7b4233ef0ae40b30a509efb8`). The 1.2 and 1.1 snapshots under `contract/audit-export-1.2/` and `contract/provider-request-1.1/` are retained byte-for-byte as historical evidence; their checks continue to validate the vendored 1.2/1.1 source. The 1.3 checker requires shipped-skill parity with the pinned 1.3 snapshot, without a sibling checkout.
 
 ## HTP tool coverage
 
-The skill folders name all 18 HTP tools the server exposes. Seventeen appear in `SKILL.md`
+The skill folders name all 20 HTP tools the reviewed server source exposes. Nineteen appear in `SKILL.md`
 files. `hello_world_secured` appears only in `seo-review/references/data.md`, where it is
 described as an authentication greeting. No `SKILL.md` uses it for data reads.
 
 Tools named in `SKILL.md` files: `list_websites`, `get_website`, `create_website`, `update_website`,
 `delete_website`, `set_website_ga4_property`, `set_website_business_location`,
 `set_website_repository`, `request_website_report`, `website_saved_data`,
-`website_audit_history`, `website_audit_detail`, `import_website_audit`,
+`website_audit_history`, `website_audit_detail`, `website_audit_events`,
+`website_operational_episodes`, `import_website_audit`,
 `get_provider_connection`, `disconnect_provider`, `inspect_website_url`,
 `website_repository_history`.
+
+The two audit read tools are additive and gated by discovery. The still-deployed server exposes 23 MCP tools and does not list them; a missing tool is `unsupported` and must never be substituted by an empty success. After the reviewed source is deployed (25 tools) they return `availability:producer_unavailable` while the H15 audit notification gates remain disabled; that state is not an empty history, a zero count or proof that no events exist. These reads never start collection, claim, processing or delivery.
 
 The profile additionally references `get_website_report_request` and `cancel_website_report_request` as gated lifecycle tools. Keyed submission and these references require capability discovery, a deployed compatible backend, and host verification; they are not baseline availability. Backend PR 45 is pinned at `48485a55773b1ca97e165a4715d343704270266e`.
 
@@ -244,3 +247,5 @@ against the deployed service.
 The separate contract 1.2.0 audit-export readiness snapshot is offline evidence, distinct from package version 1.2.1. Its checks run with `node scripts/check-audit-export-readiness.mjs` (`--export-results PATH` accepts Claude measured results) and `node --test scripts/test-audit-export-readiness.mjs`. Complete audit export is gated: it requires discovered deployed `website_audit_export_start_v1`, `_chunk_v1` and `_close_v1` tools, a verified backend, and host acceptance. Small `website_audit_detail` results are unchanged; a large unsafe result returns `EXPORT_REQUIRED`, which Claude hosts must follow to the export workflow.
 
 The separate contract 1.1.0 readiness snapshot is offline evidence, distinct from package version 1.2.1. Run `node scripts/check-provider-request-readiness.mjs` for synthetic traces or add `--provider-results PATH` for Claude results. Measured context and counters require independent provenance. Neither this check nor the source lock proves deployment, OAuth, live host normalization or lifecycle behavior; host issue #1 remains open. HTP lifecycle and SEOsmith host adapter live acceptance gates both remain in force.
+
+The separate additive audit read 1.3.0 readiness snapshot is offline evidence, distinct from package version 1.2.1. Its checks run with `node scripts/check-audit-read-readiness.mjs` (`--audit-read-results PATH` accepts Claude measured results) and `node --test scripts/test-audit-read-readiness.mjs`. Both reads are gated: a missing tool is `unsupported`, and a discovered tool returns `availability:producer_unavailable` while the H15 producer gates are disabled. That state is never an empty history or a zero count. No host auth, backend, producer or installed-skill run is exercised.
