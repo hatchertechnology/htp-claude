@@ -60,6 +60,23 @@ or live credential. It does not establish canonical-main advancement, session
 reload, tool discovery, producer availability, OAuth or a tagged release. All
 remaining live-host gates below stay open.
 
+## Release 1.3.0 rehearsal (disposable homes, loopback smart-Git mirror, Claude Code 2.1.332)
+
+`node scripts/rehearse-release-claude.mjs --root <new dir> --target <sha>` builds a throwaway bare clone of this
+repository, serves it over loopback smart HTTP from a child process, and drives the real `claude plugin` CLI in fresh
+`CLAUDE_CONFIG_DIR`/`HOME`/XDG profiles. It makes no login, MCP or model call, never touches `~/.claude`, contacts no remote,
+creates tags only inside the mirror, and deletes nothing. Per baseline it checks, from the registry and the installed bytes:
+
+- install of the baseline (`v1.1.0` at `0c0fba9414109ed3991d5bfdbaf71195e0eee621`, and `v1.2.2` at `6f4dd3232bb4218f12cb6bf2fe1a8f2bfe3f0a5f`), every installed file byte-equal to that commit's plugin tree;
+- unchanged-mirror `marketplace update` / `plugin update` is a no-op;
+- upgrade to the 1.3.0 commit through the ordinary update commands: registry SHA and version change, `installedAt` unchanged, every installed byte equals the target tree, the `lifecycle-remediation` skill and the `engines` floor are present;
+- rollback by the documented source switch to the baseline tag (`marketplace add <url>#<tag>`), left disabled until the registry SHA and bytes are verified, then re-enabled; roll forward again by the `v1.3.0` tag;
+- an `engines.claude-code` floor above the host (a mirror-only commit with `>=99.0.0`) is refused for a git source: `it needs Claude Code >=99.0.0`.
+
+Exact SHAs and logs are in the coordination task report. This is controlled-mirror evidence, not canonical-GitHub, session-reload,
+sign-in or tagged-release evidence. The real tags are created only in R5 step 0. Owner-attended checks are in
+[owner acceptance](owner-acceptance-claude.md).
+
 ## Installed-package SEOsmith helper acceptance (seeded, offline, 2026-11-24)
 
 An ordinary canonical install was created in a fresh isolated `CLAUDE_CONFIG_DIR`
@@ -101,13 +118,13 @@ the silent no-op before the fix.
 
 ## Not verified (open)
 
-- **Published release-tag rollback and an upgrade driven by canonical-main advancement.**
-  Canonical install and commit-selected reinstall and the controlled two-version
+- **Published release-tag rollback from GitHub and an upgrade driven by canonical-main advancement.**
+  Tag rollback and upgrade are rehearsed against a loopback mirror only (see above). Canonical install and commit-selected reinstall and the controlled two-version
   update are verified above. Earlier `file://` and dumb-HTTP failures do not apply
   to the successful smart-Git mirror. No previous release tag existed at testing;
   the immutable historical commit is supported but is not a tagged release.
-- Minimum supported Claude Code version. Tested 2.1.330 and 2.1.331 lifecycle
-  checks do not establish a minimum.
+- Behavior below Claude Code 2.1.331. The declared floor (`engines.claude-code`) is the lowest tested version, not a proven
+  incompatibility boundary. `engines` enforcement was observed on 2.1.332 only.
 - `${CLAUDE_PLUGIN_ROOT}` substitution inside `SKILL.md` text in a live session. The installed-cache helper path is
   now verified directly (see above); a live skill invocation transcript is not.
 - Interactive OAuth sign-in, reconnect, sign-out, auth expiry and denied-website behavior (needs a browser session).

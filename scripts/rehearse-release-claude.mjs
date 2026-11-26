@@ -18,6 +18,42 @@ import { createHash } from 'node:crypto';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// ---- smart-HTTP git server (runs in a CHILD process: the main flow uses spawnSync, which would block it) ----
+function serveGit(serveRoot) {
+  const server = createServer((req, res) => {
+    const u = new URL(req.url, 'http://127.0.0.1');
+    const env = {
+      PATH: process.env.PATH, GIT_PROJECT_ROOT: serveRoot, GIT_HTTP_EXPORT_ALL: '1',
+      REQUEST_METHOD: req.method, PATH_INFO: u.pathname, QUERY_STRING: u.search.slice(1),
+      CONTENT_TYPE: req.headers['content-type'] || '', REMOTE_ADDR: '127.0.0.1',
+      ...(req.headers['content-length'] ? { CONTENT_LENGTH: req.headers['content-length'] } : {}),
+      ...(req.headers['content-encoding'] ? { HTTP_CONTENT_ENCODING: req.headers['content-encoding'] } : {}),
+      ...(req.headers['git-protocol'] ? { GIT_PROTOCOL: req.headers['git-protocol'] } : {}),
+    };
+    const child = spawn('git', ['http-backend'], { env });
+    req.pipe(child.stdin);
+    let buf = Buffer.alloc(0), sent = false;
+    child.stdout.on('data', (d) => {
+      if (sent) { res.write(d); return; }
+      buf = Buffer.concat([buf, d]);
+      const at = buf.indexOf('\r\n\r\n');
+      if (at < 0) return;
+      const head = buf.subarray(0, at).toString();
+      let status = 200; const headers = {};
+      for (const line of head.split('\r\n')) {
+        const i = line.indexOf(':'); if (i < 0) continue;
+        const k = line.slice(0, i).trim(), v = line.slice(i + 1).trim();
+        if (k.toLowerCase() === 'status') status = parseInt(v, 10); else headers[k] = v;
+      }
+      res.writeHead(status, headers); sent = true; res.write(buf.subarray(at + 4));
+    });
+    child.stdout.on('end', () => res.end());
+    child.on('error', () => res.end());
+  });
+  server.listen(0, '127.0.0.1', () => console.log(server.address().port));
+}
+if (process.argv[2] === '--serve') { serveGit(process.argv[3]); await new Promise(() => {}); }
+
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
 const opt = (name, dflt) => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : dflt; };
@@ -54,42 +90,13 @@ git(mirror, 'config', 'http.receivepack', 'false');
 const setMain = (sha) => git(mirror, 'update-ref', 'refs/heads/main', sha);
 git(mirror, 'symbolic-ref', 'HEAD', 'refs/heads/main');
 // Throwaway tags in the MIRROR only.
-git(mirror, 'tag', '-f', 'v1.1.0', fullV110);
-git(mirror, 'tag', '-f', 'v1.2.2', fullV122);
-git(mirror, 'tag', '-f', 'v1.3.0', fullTarget);
+git(mirror, 'update-ref', 'refs/tags/v1.1.0', fullV110);
+git(mirror, 'update-ref', 'refs/tags/v1.2.2', fullV122);
+git(mirror, 'update-ref', 'refs/tags/v1.3.0', fullTarget);
 
-const server = createServer((req, res) => {
-  const u = new URL(req.url, 'http://127.0.0.1');
-  const env = {
-    PATH: process.env.PATH, GIT_PROJECT_ROOT: join(root, 'serve'), GIT_HTTP_EXPORT_ALL: '1',
-    REQUEST_METHOD: req.method, PATH_INFO: u.pathname, QUERY_STRING: u.search.slice(1),
-    CONTENT_TYPE: req.headers['content-type'] || '', REMOTE_ADDR: '127.0.0.1',
-    ...(req.headers['content-length'] ? { CONTENT_LENGTH: req.headers['content-length'] } : {}),
-    ...(req.headers['content-encoding'] ? { HTTP_CONTENT_ENCODING: req.headers['content-encoding'] } : {}),
-    ...(req.headers['git-protocol'] ? { GIT_PROTOCOL: req.headers['git-protocol'] } : {}),
-  };
-  const child = spawn('git', ['http-backend'], { env });
-  req.pipe(child.stdin);
-  let buf = Buffer.alloc(0), sent = false;
-  child.stdout.on('data', (d) => {
-    if (sent) { res.write(d); return; }
-    buf = Buffer.concat([buf, d]);
-    const at = buf.indexOf('\r\n\r\n');
-    if (at < 0) return;
-    const head = buf.subarray(0, at).toString();
-    let status = 200; const headers = {};
-    for (const line of head.split('\r\n')) {
-      const i = line.indexOf(':'); if (i < 0) continue;
-      const k = line.slice(0, i).trim(), v = line.slice(i + 1).trim();
-      if (k.toLowerCase() === 'status') status = parseInt(v, 10); else headers[k] = v;
-    }
-    res.writeHead(status, headers); sent = true; res.write(buf.subarray(at + 4));
-  });
-  child.stdout.on('end', () => res.end());
-  child.on('error', () => res.end());
-});
-await new Promise((ok) => server.listen(0, '127.0.0.1', ok));
-const url = `http://127.0.0.1:${server.address().port}/htp-claude.git`;
+const server = spawn(process.execPath, [fileURLToPath(import.meta.url), '--serve', join(root, 'serve')], { stdio: ['ignore', 'pipe', 'inherit'] });
+const port = await new Promise((ok, bad) => { server.stdout.once('data', (d) => ok(parseInt(String(d), 10))); server.once('error', bad); });
+const url = `http://127.0.0.1:${port}/htp-claude.git`;
 
 // ---- disposable profile + claude wrapper ----
 const claudeBin = spawnSync('which', ['claude'], { encoding: 'utf8' }).stdout.trim();
@@ -106,7 +113,7 @@ function profile() {
     GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: 'false', NO_COLOR: '1',
   };
   const claude = (...args) => spawnSync(claudeBin, args, { cwd: join(dir, 'work'), env, encoding: 'utf8', timeout: 180000 });
-  const must = (...args) => { const r = claude(...args); assert.equal(r.status, 0, `claude ${args.join(' ')} failed: ${(r.stderr || r.stdout).trim().split('\n').slice(-2).join(' | ')}`); return r.stdout; };
+  const must = (...args) => { const r = claude(...args); assert.equal(r.status, 0, `claude ${args.join(' ')} failed: ${(r.stderr || r.stdout).trim().replace(/\s+/g, ' ').slice(-700)}`); return r.stdout; };
   const registry = () => {
     const f = join(dir, 'config/plugins/installed_plugins.json');
     const entries = (JSON.parse(readFileSync(f, 'utf8')).plugins['htp@htp'] || []).filter((p) => p.scope === 'user');
@@ -204,7 +211,7 @@ step('engines floor above the host is refused for a git source', () => {
   const j = JSON.parse(readFileSync(mf, 'utf8')); j.engines['claude-code'] = '>=99.0.0'; writeFileSync(mf, JSON.stringify(j, null, 2) + '\n');
   const mk = join(tmp, '.claude-plugin/marketplace.json');
   const m = JSON.parse(readFileSync(mk, 'utf8')); m.plugins[0].version = j.version; writeFileSync(mk, JSON.stringify(m, null, 2) + '\n');
-  git(tmp, '-c', 'user.name=rehearsal', '-c', 'user.email=rehearsal@example.invalid', 'commit', '--quiet', '-am', 'rehearsal: engines floor 99');
+  git(tmp, '-c', 'commit.gpgsign=false', '-c', 'user.name=rehearsal', '-c', 'user.email=rehearsal@example.invalid', 'commit', '--quiet', '-am', 'rehearsal: engines floor 99');
   git(tmp, 'push', '--quiet', mirror, 'HEAD:refs/heads/rehearsal-engines');
   const p = profile();
   setMain(git(mirror, 'rev-parse', 'refs/heads/rehearsal-engines'));
@@ -217,7 +224,7 @@ step('engines floor above the host is refused for a git source', () => {
   return `refused (${text.trim().split('\n').slice(-1)[0].slice(0, 160)})`;
 });
 
-server.close();
+server.kill();
 const failed = results.filter(([, ok]) => !ok);
 out(`# ${results.length - failed.length}/${results.length} steps passed; root ${root}`);
 process.exit(failed.length ? 1 : 0);

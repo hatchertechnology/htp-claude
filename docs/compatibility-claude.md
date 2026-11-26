@@ -71,7 +71,7 @@ Lifecycle commands tested in isolated `CLAUDE_CONFIG_DIR` profiles (see
 | Install | `claude plugin marketplace add hatchertechnology/htp-claude` then `claude plugin install htp@htp` |
 | Upgrade | `claude plugin marketplace update htp` then `claude plugin update htp@htp`, then restart or `/reload-plugins`. A real 1.1.0 → 1.2.0 CLI transition passed on a controlled smart-Git mirror; canonical unchanged-main checks were no-ops. The 1.2.1 → 1.2.2 CLI transition is verified on a controlled smart-Git mirror with exact installed bytes and registry revision; see host verification. Session reload was not tested. |
 | Uninstall | `claude plugin uninstall htp@htp`; optionally `claude plugin marketplace remove htp` |
-| Rollback | Source-switch reinstall, with the precautions and post-install revision check below. No published rollback tag was available at verification time. |
+| Rollback | Source-switch reinstall, with the precautions and post-install revision check below. Tag rollback (`marketplace add <repo>#<tag>` against a mirror) was rehearsed for `v1.1.0` and `v1.2.2`; the real tags are created in R5 step 0, so no published tag exists until then. |
 
 ### Rollback and existing marketplace settings
 
