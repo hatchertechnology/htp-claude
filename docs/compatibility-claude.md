@@ -11,8 +11,8 @@ criteria at the end of this page are met with live evidence.
 | Item | Value |
 | --- | --- |
 | Claude Code tested | 2.1.331 (canonical Git marketplace lifecycle and controlled upgrade); 2.1.330 (local-directory lifecycle and validation); 2.1.325 for earlier readiness work |
-| Minimum version | Not yet verified. Do not rely on a minimum until it is tested. |
-| Plugin version | 1.2.2 (`plugins/htp/.claude-plugin/plugin.json`, matches the marketplace entry) |
+| Minimum version | **2.1.331**, declared as `engines.claude-code: ">=2.1.331"` in `plugins/htp/.claude-plugin/plugin.json`. It is the lowest version with recorded git-marketplace install, upgrade and rollback evidence. Claude Code reads `engines` and refuses a git-sourced install whose floor is above the host (rehearsed on 2.1.332 against a mirror-only commit; a local-folder source loads anyway with a note). `minClaudeCodeVersion` is **not** a host field: `claude plugin validate` reports it unknown and the host ignores it. Versions below 2.1.331 are untested, not known-bad. |
+| Plugin version | 1.3.0 (`plugins/htp/.claude-plugin/plugin.json`, matches the marketplace entry) |
 | Install id | `htp@htp` (plugin `htp`, marketplace `htp`) |
 | Validation | `claude plugin validate ./plugins/htp` and `claude plugin validate .` pass |
 | Installed-package SEOsmith helper acceptance | Passed on 2.1.331: the shipped helper run from the installed plugin directory against a real adapter-v1 binary and seeded stored state produced report content, byte-exact export and terminal cancellation |
@@ -71,7 +71,7 @@ Lifecycle commands tested in isolated `CLAUDE_CONFIG_DIR` profiles (see
 | Install | `claude plugin marketplace add hatchertechnology/htp-claude` then `claude plugin install htp@htp` |
 | Upgrade | `claude plugin marketplace update htp` then `claude plugin update htp@htp`, then restart or `/reload-plugins`. A real 1.1.0 → 1.2.0 CLI transition passed on a controlled smart-Git mirror; canonical unchanged-main checks were no-ops. The 1.2.1 → 1.2.2 CLI transition is verified on a controlled smart-Git mirror with exact installed bytes and registry revision; see host verification. Session reload was not tested. |
 | Uninstall | `claude plugin uninstall htp@htp`; optionally `claude plugin marketplace remove htp` |
-| Rollback | Source-switch reinstall, with the precautions and post-install revision check below. No published rollback tag was available at verification time. |
+| Rollback | Source-switch reinstall, with the precautions and post-install revision check below. Tag rollback (`marketplace add <repo>#<tag>` against a mirror) was rehearsed for `v1.1.0` and `v1.2.2`; the real tags are created in R5 step 0, so no published tag exists until then. |
 
 ### Rollback and existing marketplace settings
 
@@ -143,6 +143,8 @@ missing. This procedure verifies rollback by commit. A release-tag procedure
 requires a published tag and its own verification. Return to main through the same reviewed uninstall/remove/
 add/install process and verify its intended revision before enabling.
 
+1.3.0 adds the host-specific `lifecycle-remediation` skill for contract profile 1.4.0 (the three owner-scoped parity reads and the extended audit-read `availability` codes), declares the minimum host version through `engines.claude-code`, and vendors the 1.4.0 contract snapshot. The shared skills are byte-unchanged from 1.2.2. Upgrades from 1.1.0 and 1.2.2 and rollbacks to both were rehearsed in disposable homes against a local smart-Git mirror (see [host verification](host-verification-claude.md)). Because rollback is a source switch, installed state and any local sign-in are not preserved; sign in again if prompted.
+
 The 1.1.0 skills and `.mcp.json` are unchanged in 1.2.0. 1.2.0 adds one
 skill (`seosmith-operations`) and one helper (`bin/seosmith-ops.mjs`). 1.2.1
 keeps the same skills and MCP declaration and makes the helper entry guard
@@ -162,10 +164,11 @@ with `name` and `description` frontmatter, and `name` equals its folder name.
 | `seo-review` | Reads saved HTP evidence: website list, saved data, repository history, audit history and detail. Reads never start collection. |
 | `website-management` | Website CRUD, GA4 and Business Profile bindings, report requests, provider status, indexed URL inspection, audit import, and the additive stored audit-event / provider operational-episode reads (`producer_unavailable` while the H15 producer gates are disabled). |
 | `repository-settings` | Attach, pause or remove a website's public repository. |
+| `lifecycle-remediation` | Host-specific, profile 1.4.0, read-only and gated by discovery. `website_audit_lifecycle`, `website_url_lifecycle` and `website_remediation_list`, plus the six `availability` codes of the stored event reads. A missing tool is `unsupported`; `unavailable` (503) is a held rollout, never an empty page or work queue; only `producer_active` lets an empty events page mean none. Not part of the shared pinned set. |
 | `seosmith-operations` | Host-specific. Explicit bounded SEOsmith start, status, cancel, report and export through the local adapter helper. Not part of the shared pinned set. |
 
-Shared skills are synchronized byte-for-byte with the current additive 1.3 lock; `seosmith-operations` is exempt from
-those pins and is listed explicitly in `scripts/check-claude-contract.mjs`. To resynchronize, replace the
+Shared skills are synchronized byte-for-byte with the current additive 1.3 lock (profile 1.4.0 adds no shared skill text); `seosmith-operations` and `lifecycle-remediation` are exempt from
+those pins and are listed explicitly in `scripts/check-claude-contract.mjs`. To resynchronize, replace the
 vendored `contract/` snapshot and lock together, rerun the checks, and bump the plugin version.
 
 The four shipped skill files match the additive 1.3 source lock (`contract/audit-reads-1.3.lock.json`) at merged HTP PR #82 revision `4e7dc94e4f92a30fb57e4061fa1f06d517157c63` (tree `36a9456c6e2a819e7b4233ef0ae40b30a509efb8`). The 1.2 and 1.1 snapshots under `contract/audit-export-1.2/` and `contract/provider-request-1.1/` are retained byte-for-byte as historical evidence; their checks continue to validate the vendored 1.2/1.1 source. The 1.3 checker requires shipped-skill parity with the pinned 1.3 snapshot, without a sibling checkout.
@@ -183,6 +186,8 @@ Tools named in `SKILL.md` files: `list_websites`, `get_website`, `create_website
 `website_operational_episodes`, `import_website_audit`,
 `get_provider_connection`, `disconnect_provider`, `inspect_website_url`,
 `website_repository_history`.
+
+The three profile-1.4.0 parity reads (`website_audit_lifecycle`, `website_url_lifecycle`, `website_remediation_list`) are gated references only, handled by the `lifecycle-remediation` skill. They are not in the 20-tool baseline set and are not claimed available: discovery decides, and each answers `unavailable` (503) while its own rollout flag is off in the deployed API.
 
 The two audit read tools are additive and gated by discovery. The still-deployed server exposes 23 MCP tools and does not list them; a missing tool is `unsupported` and must never be substituted by an empty success. After the reviewed source is deployed (25 tools) they return `availability:producer_unavailable` while the H15 audit notification gates remain disabled; that state is not an empty history, a zero count or proof that no events exist. These reads never start collection, claim, processing or delivery.
 
@@ -217,6 +222,9 @@ Evidence v2, authorized staging and baseline CI are advertised false by adapter 
 | SEOsmith explicit start, status, cancel, report, export (local) | Implemented; fixture and real-binary non-crawl tests pass, and the installed-package helper passed report content, byte-exact export and terminal cancellation on seeded stored state; a live crawl through a Claude session is **not yet accepted** |
 | Standalone local SEOsmith audit | Same as above; needs a configured binary, no HTP account |
 | Baseline-aware CI and staging profiles | Unsupported until a backend release ships them |
+| Complete audit export (`website_audit_export_*_v1`) | Gated by discovery; the shared `website-management` skill carries the workflow. A missing tool is `unsupported`; `EXPORT_REQUIRED` is never a partial success. |
+| Report requests (`request_website_report`, `get_website_report_request`, `cancel_website_report_request`) | Keyed lifecycle gated by discovery; the unkeyed baseline makes no durable-identity claim. |
+| Lifecycle history and remediation work queue (profile 1.4.0 reads) | Gated by discovery and per-read rollout flags; read-only; `lifecycle-remediation` skill |
 | Forms, orchestration, browser or AI workflows | Unsupported until backend releases ship them |
 
 ## Release criteria for closing htp-claude #1
@@ -227,8 +235,7 @@ start/status/cancel/report/export through a Claude session with a trusted binary
 the installed-package helper path on seeded data is already verified, so this gate is specifically the
 live crawl and live-session invocation.
 (3) deployed export-v1 and report-request tools discovered, then exercised; (4) two independent exact-head
-reviews and merge by the integration owner; (5) tagged release for rollback. Gated skills for forms,
-lifecycle, remediation, provider outcomes, browser/AI workflows and baseline CI are **not** shipped: no
+reviews and merge by the integration owner; (5) tagged release for rollback. The lifecycle and remediation reads ship as a capability-gated skill (`lifecycle-remediation`, 1.3.0); it asserts no availability. Gated skills for forms, provider outcomes, browser/AI workflows and baseline CI are **not** shipped: no
 backend release provides them, and a skill must not be added until discovery shows the tools.
 
 ## Checks
@@ -249,3 +256,5 @@ The separate contract 1.2.0 audit-export readiness snapshot is offline evidence,
 The separate contract 1.1.0 readiness snapshot is offline evidence, distinct from package version 1.2.2. Run `node scripts/check-provider-request-readiness.mjs` for synthetic traces or add `--provider-results PATH` for Claude results. Measured context and counters require independent provenance. Neither this check nor the source lock proves deployment, OAuth, live host normalization or lifecycle behavior; host issue #1 remains open. HTP lifecycle and SEOsmith host adapter live acceptance gates both remain in force.
 
 The separate additive audit read 1.3.0 readiness snapshot is offline evidence, distinct from package version 1.2.2. Its checks run with `node scripts/check-audit-read-readiness.mjs` (`--audit-read-results PATH` accepts Claude measured results) and `node --test scripts/test-audit-read-readiness.mjs`. Both reads are gated: a missing tool is `unsupported`, and a discovered tool returns `availability:producer_unavailable` while the H15 producer gates are disabled. That state is never an empty history or a zero count. No host auth, backend, producer or installed-skill run is exercised.
+
+The separate additive parity read 1.4.0 readiness snapshot is offline evidence, distinct from package version 1.3.0. Its checks run with `node scripts/check-parity-read-readiness.mjs` (`--parity-read-results PATH` accepts Claude measured results) and `node --test scripts/test-parity-read-readiness.mjs`. It pins the vendored `contract/parity-reads-1.4/` tree to HTP main `09a0ba56c175e3e889bfa5a8eacff01666851e39`, requires the shared skills to stay byte-equal to the 1.3 pin, validates 23 synthetic scenarios and the six-code availability amendment, and checks that the `lifecycle-remediation` skill names every tool, code and gate. A missing tool is `unsupported`; a held read is `unavailable` (503), never an empty page. No host auth, backend or rollout flag is exercised. Release-shape checks (version 1.3.0 in both manifests, the `engines` floor, gated references) run with `node --test scripts/test-claude-release.mjs`. The disposable-home install, upgrade and rollback rehearsal is `node scripts/rehearse-release-claude.mjs --root <new dir> --target <sha>`; it deletes nothing, creates tags only in its throwaway mirror and never touches `~/.claude`.

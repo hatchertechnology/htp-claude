@@ -16,6 +16,10 @@ From a shell, the same steps are `claude plugin marketplace add hatchertechnolog
 and `claude plugin install htp@htp`. Compatibility, tested versions and rollback are in
 [docs/compatibility-claude.md](docs/compatibility-claude.md).
 
+## Requirements
+
+Claude Code 2.1.331 or newer (`engines.claude-code` in the plugin manifest). Release 1.3.0.
+
 ## Connect
 
 The plugin registers the `htp` MCP server
@@ -28,9 +32,10 @@ stored in the plugin.
 - `seo-review` — review saved SEO and performance evidence, compare domains, prioritize fixes
 - `website-management` — add, rename or delete websites; GA4 and Business Profile bindings; Seosmith audits
 - `repository-settings` — attach, pause or remove a website's public GitHub repository
+- `lifecycle-remediation` — read-only lifecycle history, remediation work queue and event availability codes (contract profile 1.4.0); gated by tool discovery and per-read rollout flags
 - `seosmith-operations` — explicit, bounded SEOsmith start/status/cancel/report/export via a locally configured binary (`SEOSMITH_BIN`); no HTP account needed. Gated and mode-aware; see compatibility.
 
-The four shared skill files are checked against the additive HTP 1.3 source snapshot (complete audit export 1.2.0 plus the gated stored audit-event and provider operational-episode reads 1.3.0). Run `node scripts/check-claude-contract.mjs`, `node scripts/check-provider-request-readiness.mjs`, `node scripts/check-audit-export-readiness.mjs` and `node scripts/check-audit-read-readiness.mjs`; the export tests are `node --test scripts/test-audit-export-readiness.mjs` and the read tests are `node --test scripts/test-audit-read-readiness.mjs`. This is offline readiness only: provider lifecycle use requires backend capability and live host verification. The two 1.3 reads are gated by discovery: absent tools are unsupported, and discovered tools return `availability:producer_unavailable` while the H15 producer gates are disabled. The installed plugin's SEOsmith helper has been verified on seeded stored state against a real adapter-v1 binary (report content, byte-exact export and terminal cancellation); a live Claude-session crawl is not yet accepted. Host issue #1 remains open. See [compatibility](docs/compatibility-claude.md) for limits.
+The four shared skill files are checked against the additive HTP 1.3 source snapshot (complete audit export 1.2.0 plus the gated stored audit-event and provider operational-episode reads 1.3.0). Run `node scripts/check-claude-contract.mjs`, `node scripts/check-provider-request-readiness.mjs`, `node scripts/check-audit-export-readiness.mjs` and `node scripts/check-audit-read-readiness.mjs`; the export tests are `node --test scripts/test-audit-export-readiness.mjs` and the read tests are `node --test scripts/test-audit-read-readiness.mjs`. This is offline readiness only: provider lifecycle use requires backend capability and live host verification. The two 1.3 reads are gated by discovery: absent tools are unsupported, and discovered tools return `availability:producer_unavailable` while the H15 producer gates are disabled. The installed plugin's SEOsmith helper has been verified on seeded stored state against a real adapter-v1 binary (report content, byte-exact export and terminal cancellation); a live Claude-session crawl is not yet accepted. The additive parity-read 1.4.0 snapshot is checked by `node scripts/check-parity-read-readiness.mjs` and `node --test scripts/test-parity-read-readiness.mjs`; those reads are gated and a held read is never an empty result. Host issue #1 remains open. See [compatibility](docs/compatibility-claude.md) for limits.
 
 ## License
 
