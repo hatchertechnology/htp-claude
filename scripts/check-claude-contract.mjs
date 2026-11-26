@@ -34,7 +34,15 @@ const HTP_TOOLS = new Set([
   'website_repository_history', 'hello_world_secured',
 ]);
 // References are conditional on backend capability and release gates.
-const GATED_TOOLS = new Set(['get_website_report_request', 'cancel_website_report_request', 'website_audit_export_start_v1', 'website_audit_export_chunk_v1', 'website_audit_export_close_v1']);
+const GATED_TOOLS = new Set([
+  'get_website_report_request', 'cancel_website_report_request',
+  'website_audit_export_start_v1', 'website_audit_export_chunk_v1', 'website_audit_export_close_v1',
+  // Profile 1.4.0 parity reads: discovered per session, each behind its own rollout flag.
+  'website_audit_lifecycle', 'website_url_lifecycle', 'website_remediation_list',
+]);
+// Declared minimum Claude Code version. The host enforces `engines.claude-code` for non-local sources.
+// 2.1.331 is the lowest version with recorded git-marketplace install, upgrade and rollback evidence.
+const MIN_CLAUDE_CODE = '2.1.331';
 // SEOsmith operations must not appear pending host adapter live acceptance.
 const SEOSMITH_OP = /seosmith_(start|status|cancel|report|export)|run_seosmith|start_seosmith/i;
 const SECRET_LIKE = /(sk-[A-Za-z0-9]{16,}|gho_[A-Za-z0-9]{16,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|Bearer\s+[A-Za-z0-9._-]{16,})/;
@@ -63,6 +71,10 @@ if (marketplace && manifest) {
   for (const key of ['description', 'author', 'homepage', 'license']) {
     if (!manifest[key]) fail(`plugin.json missing ${key}`);
   }
+  const engine = manifest.engines && manifest.engines['claude-code'];
+  if (engine !== `>=${MIN_CLAUDE_CODE}`) fail(`plugin.json engines.claude-code must be ">=${MIN_CLAUDE_CODE}", found ${JSON.stringify(engine)}`);
+  if (manifest.minClaudeCodeVersion !== undefined) fail('plugin.json must not use the unknown field minClaudeCodeVersion; the host ignores it');
+  if (manifest.version !== '1.3.0') fail(`plugin.json version must be 1.3.0 for this release, found ${manifest.version}`);
   if (manifest.skills !== undefined) notes.push('plugin.json sets "skills"; default scan adds to it');
 }
 
@@ -95,7 +107,7 @@ const skillFolders = readdirSync(skillsDir).filter((n) => statSync(join(skillsDi
 if (skillFolders.length === 0) fail('no skills found under plugins/htp/skills');
 // Shared skills are pinned by the contract locks; host-specific skills are listed here and
 // must carry the capability-gate language below.
-const HOST_SKILLS = ['seosmith-operations'];
+const HOST_SKILLS = ['seosmith-operations', 'lifecycle-remediation'];
 const SHARED_SKILLS = ['repository-settings', 'seo-review', 'website-management'];
 if ([...skillFolders].sort().join() !== [...SHARED_SKILLS, ...HOST_SKILLS].sort().join()) fail(`unexpected skill set: ${skillFolders.join(', ')}`);
 
@@ -162,9 +174,19 @@ notes.push(
 // pin, additive 1.3 gated read readiness)
 try { execFileSync(process.execPath, [join(root, 'scripts/check-provider-request-readiness.mjs')], {stdio: 'pipe'}); }
 catch (err) { fail(`provider readiness parity failed: ${err.stderr?.toString() || err.message}`); }
-for (const script of ['scripts/check-audit-export-readiness.mjs', 'scripts/check-audit-read-readiness.mjs']) {
+for (const script of ['scripts/check-audit-export-readiness.mjs', 'scripts/check-audit-read-readiness.mjs', 'scripts/check-parity-read-readiness.mjs']) {
   try { execFileSync(process.execPath, [join(root, script)], {stdio: 'pipe'}); }
   catch (err) { fail(`${script} failed: ${err.stderr?.toString() || err.message}`); }
+}
+
+// 4b. The export and report-request tools must stay referenced as gated workflows in the shared skills,
+// and the 1.4 parity reads must be gated references only (never baseline tools).
+const wm = read('plugins/htp/skills/website-management/SKILL.md');
+for (const tool of ['get_website_report_request', 'cancel_website_report_request', 'website_audit_export_start_v1', 'website_audit_export_chunk_v1', 'website_audit_export_close_v1']) {
+  if (!wm.includes('`' + tool + '`')) fail(`website-management must reference gated tool ${tool}`);
+}
+for (const tool of ['website_audit_lifecycle', 'website_url_lifecycle', 'website_remediation_list']) {
+  if (HTP_TOOLS.has(tool)) fail(`${tool} must be a gated reference, not a baseline tool`);
 }
 
 // 5. README install steps must match the documented syntax

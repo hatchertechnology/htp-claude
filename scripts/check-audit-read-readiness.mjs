@@ -72,7 +72,7 @@ const shippedInventory = readdirSync(join(root, 'plugins/htp/skills'), { withFil
       return [path.slice(root.length)];
     });
   })
-  .filter((p) => !p.startsWith('plugins/htp/skills/seosmith-operations/'))
+  .filter((p) => !['seosmith-operations', 'lifecycle-remediation'].some((host) => p.startsWith(`plugins/htp/skills/${host}/`)))
   .sort();
 assert.deepEqual(shippedInventory, shippedSkills.slice().sort(), 'shipped skill inventory drift');
 for (const path of shippedSkills) assert.equal(hash(root, path), lock.files[path], 'shipped skill drift: ' + path);

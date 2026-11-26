@@ -1,6 +1,6 @@
 {
   "name": "htp",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "description": "Analyze saved website evidence in HTP and make source-backed SEO, performance, conversion, and content recommendations.",
   "author": {
     "name": "Kerry Hatcher",
@@ -9,5 +9,16 @@
   "homepage": "https://htp.hatchtech.dev",
   "repository": "https://github.com/hatchertechnology/htp-claude",
   "license": "MIT",
-  "keywords": ["htp", "seo", "analytics", "search-console", "pagespeed", "crux", "website-performance"]
+  "keywords": [
+    "htp",
+    "seo",
+    "analytics",
+    "search-console",
+    "pagespeed",
+    "crux",
+    "website-performance"
+  ],
+  "engines": {
+    "claude-code": ">=2.1.331"
+  }
 }
